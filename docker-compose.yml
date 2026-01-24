@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # ----------------------------
+  # 1. Base de données MongoDB
+  # ----------------------------
+  mongo-db:
+    image: mongo:latest
+    container_name: all-scans-mongo
+    ports:
+      - "27017:27017" # Accessible aussi depuis ton Windows (pour Compass)
+    volumes:
+      - mongo-data:/data/db # Pour ne pas perdre les données
+
+  # ----------------------------
+  # 2. Backend (FastAPI)
+  # ----------------------------
+  backend:
+    build: ./backend
+    container_name: all-scans-backend
+    ports:
+      - "8000:8000" # Mappage du port
+    environment:
+      # C'est ici qu'on dit au backend de contacter le service 'mongo-db'
+      - MONGO_URI=mongodb://mongo-db:27017/All_scans
+    depends_on:
+      - mongo-db
+    volumes:
+      # Permet de modifier le code Python et de voir le changement sans reconstruire
+      - ./backend:/app
+
+  # ----------------------------
+  # 3. Frontend (React)
+  # ----------------------------
+  frontend:
+    build: ./frontend
+    container_name: all-scans-frontend
+    ports:
+      - "3000:3000"
+    stdin_open: true # Indispensable pour React en Docker (mode interactif)
+    tty: true        # Indispensable pour React en Docker
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Force le hot-reload sous Windows
+    depends_on:
+      - backend
+    volumes:
+      # Permet le hot-reload (modifs JS en direct)
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      # Empêche d'écraser les node_modules du conteneur avec ceux de Windows
+      - /app/node_modules
+
+volumes:
+  mongo-data:

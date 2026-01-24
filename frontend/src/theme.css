@@ -1,0 +1,495 @@
+/* src/theme.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  /* --- PALETTE DARK & ORANGE --- */
+  --bg-main: #121212;
+  --bg-card: #1E1E1E;
+  --bg-input: #2C2C2C;
+  --bg-header: #000000;
+  --bg-hover: #333333;
+  
+  --text-main: #E0E0E0;
+  --text-muted: #A0A0A0;
+  --text-dark: #000000;
+  
+  --primary: #FF9F00;
+  --primary-hover: #E68A00;
+  
+  --danger: #F44336;
+  --success: #4CAF50;
+  
+  --border: #333333;
+  --radius: 8px;
+  --shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* --- VARIABLES THÈMES --- */
+[data-theme="dark"] {
+  --bg-main: #121212;
+  --bg-card: #1E1E1E;
+  --bg-input: #2C2C2C;
+  --bg-header: #000000;
+  --text-main: #E0E0E0;
+  --text-muted: #A0A0A0;
+  --border: #333333;
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+}
+
+[data-theme="light"] {
+  --bg-main: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --bg-input: #FFFFFF;
+  --bg-header: #FFFFFF;
+  --text-main: #212121;
+  --text-muted: #666666;
+  --border: #E0E0E0;
+  --overlay-bg: rgba(255, 255, 255, 0.8);
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  height: 100vh;
+  overflow: hidden; /* Empêche le scroll global pour le layout fixe */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- CONTENEUR GLOBAL AVEC SCROLL --- */
+.main-content {
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: var(--bg-main);
+}
+
+/* --- LAYOUT LOGIN (GAUCHE & FIXE) --- */
+.auth-container {
+  display: flex;
+  align-items: center;
+  height: calc(100vh - 60px);
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  padding-left: 5%;
+}
+
+.auth-box {
+  background-color: var(--bg-card);
+  padding: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  width: 400px;
+  max-width: 90%;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* --- ANIMATION BACKGROUND (Cartes flottantes) --- */
+.auth-background {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  overflow: hidden; 
+  z-index: -1; 
+  background: var(--bg-main);
+}
+
+.floating-card {
+  position: absolute;
+  bottom: -300px;
+  width: 150px;
+  height: 210px;
+  
+  /* Fallback si l'image ne charge pas */
+  background-color: #1a1a1a; 
+  border: 1px solid #333;
+  
+  border-radius: 10px;
+  
+  /* ✅ CHANGEMENT ICI : Opacité à 1 (pas transparent) */
+  opacity: 1; 
+  
+  
+  animation: floatUp linear infinite;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.8); /* Ombre plus forte */
+  
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover; 
+}
+
+@keyframes floatUp {
+  0% { 
+    transform: translateY(0) rotate(0deg); 
+    opacity: 0; /* Apparition progressive au tout début */
+  }
+  5% { 
+    opacity: 1; /* Devient totalement opaque rapidement */
+  }
+  95% { 
+    opacity: 1; /* Reste opaque jusqu'à la fin */
+  }
+  100% { 
+    transform: translateY(-120vh) rotate(20deg); 
+    opacity: 0; /* Disparait en sortant de l'écran */
+  }
+}
+
+/* --- RESTE DU STYLE --- */
+a { color: var(--text-main); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--primary); }
+
+.item-header { color: var(--text-muted); font-weight: 500; padding: 8px 12px; border-radius: var(--radius); }
+.item-header:hover { color: var(--primary); background-color: rgba(255, 255, 255, 0.05); }
+
+button { cursor: pointer; font-family: inherit; transition: all 0.2s; }
+
+.btn-primary { background-color: var(--primary); color: var(--text-dark); border: none; padding: 10px 20px; border-radius: var(--radius); font-weight: 700; }
+.btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.btn-secondary { background-color: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: var(--radius); }
+.btn-secondary:hover { background-color: var(--bg-hover); border-color: var(--primary); }
+
+.btn-danger { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 8px 16px; border-radius: var(--radius); }
+.btn-danger:hover { background-color: var(--danger); color: white; }
+
+input, select { background-color: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: var(--radius); outline: none; }
+input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+
+/* --- GRILLES & CARDS --- */
+.items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+
+.item-card { 
+  background-color: var(--bg-card); 
+  border-radius: var(--radius); 
+  padding: 10px; 
+  text-align: center; 
+  position: relative; 
+  transition: transform 0.2s; 
+  border: 1px solid transparent; 
+  box-shadow: var(--shadow); 
+}
+.item-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+
+.item-image { width: 100%; aspect-ratio: 1.5; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+
+/* ✅ CORRECTION ICI : kebab-case pour CSS */
+.delete-btn { 
+  position: absolute; 
+  top: 5px; 
+  right: 5px; 
+  background: rgba(0,0,0,0.6); 
+  color: white; 
+  border: none; 
+  border-radius: 50%; 
+  width: 24px; 
+  height: 24px; 
+  display: flex; 
+  align-items: center;      /* Corrigé */
+  justify-content: center;  /* Corrigé */
+}
+.delete-btn:hover { background: var(--danger); }
+
+/* --- MODALES --- */
+/* ✅ CORRECTION ICI : kebab-case pour CSS */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-box {
+  background-color: var(--bg-card);
+  width: 850px;
+  max-width: 95%;
+  max-height: 90vh;
+  display: flex;
+  gap: 25px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  color: var(--text-main);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  
+  /* Arrondi des angles demandé */
+  border-radius: 16px; 
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--text-main);
+  z-index: 10;
+  transition: all 0.2s;
+}
+.modal-close-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.modal-left {
+  flex: 0 0 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2); /* Fond légèrement plus sombre pour l'image */
+  padding: 20px;
+}
+
+.modal-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 20px 0;
+  overflow-y: auto;
+}
+
+.modal-image {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 12px; /* Arrondi de l'image elle-même */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.modal-footer {
+  margin-top: auto;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.modal-content { 
+  background-color: var(--bg-card); 
+  padding: 25px; 
+  border-radius: var(--radius); 
+  border: 1px solid var(--border); 
+  color: var(--text-main); 
+  max-width: 95%; 
+  max-height: 90vh; 
+  overflow-y: auto; 
+  position: relative; 
+}
+
+.modal-close { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; }
+.modal-close:hover { color: var(--primary); }
+
+/* ✅ CORRECTION ICI : kebab-case pour CSS */
+.filter-badge { 
+  background-color: var(--bg-input); 
+  border: 1px solid var(--primary); 
+  color: var(--primary); 
+  padding: 4px 10px; 
+  border-radius: 12px; 
+  font-size: 0.85rem; 
+  font-weight: bold; 
+  display: inline-flex; 
+  align-items: center;  /* Corrigé */
+  gap: 5px; 
+}
+
+
+
+
+
+
+
+
+
+.split-layout {
+  display: flex;
+  height: calc(100vh - 60px); /* 100% hauteur - 60px du header */
+  overflow: hidden; /* Empêche le scroll global de la page */
+  position: relative;
+}
+
+/* Barre latérale (Filtres) */
+.sidebar-filters {
+  width: 30%; /* Largeur demandée */
+  min-width: 280px; /* Largeur minimum pour rester lisible */
+  max-width: 400px; /* Largeur maximum pour ne pas être trop large */
+  background-color: var(--bg-card); /* Fond distinct pour la barre */
+  border-right: 1px solid var(--border);
+  padding: 25px;
+  overflow-y: auto; /* Scroll indépendant pour les filtres si besoin */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.2); /* Légère ombre vers la droite */
+}
+
+/* Zone des résultats (Cartes) */
+.results-area {
+  flex: 1; /* Prend tout l'espace restant */
+  padding: 25px;
+  overflow-y: auto; /* Scroll indépendant pour les cartes */
+  background-color: var(--bg-main);
+}
+
+/* Titre dans la sidebar */
+.sidebar-title {
+  color: var(--primary);
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Groupe de filtres */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 colonnes exactes */
+  gap: 25px; /* Espacement confortable */
+  padding-bottom: 20px;
+}
+
+/* Style d'image pour afficher la carte entière (Format Magic) */
+.full-card-image {
+  width: 100%;
+  /* Ratio standard d'une carte Magic (environ 63mm x 88mm) */
+  aspect-ratio: 2.5 / 3.5; 
+  object-fit: contain; /* Affiche toute l'image sans la couper */
+  border-radius: 4.75% / 3.5%; /* Arrondi réaliste des coins */
+  box-shadow: 2px 4px 8px rgba(0,0,0,0.5); /* Ombre portée */
+  transition: transform 0.2s;
+}
+
+.full-card-image:hover {
+  transform: scale(1.02); /* Petit effet de zoom au survol */
+}
+
+
+/* --- src/theme.css (À ajouter/remplacer à la fin) --- */
+
+/* Grille collection : 4 cartes par ligne */
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Force 4 colonnes */
+  gap: 15px; /* Espace réduit pour optimiser l'espace */
+  padding: 10px; /* Marge interne */
+}
+
+/* Style de l'image de la carte (Format Magic Full) */
+.full-card-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2.5 / 3.5; /* Ratio standard carte Magic */
+  object-fit: cover; /* Remplit le cadre proprement */
+  border-radius: 6px 6px 0 0; /* Arrondi en haut seulement (comme les item-card) */
+  display: block;
+}
+
+/* Ajustement du conteneur "Carte" pour qu'il ressemble aux Decks */
+.item-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, border-color 0.2s;
+  overflow: hidden; /* Important pour que l'image ne dépasse pas des coins */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+/* Zone de texte sous l'image */
+.card-info {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--bg-card);
+}
+
+
+
+
+.btn-import {
+  display: block;
+  width: 100%;
+  margin-top: 15px;
+  background-color: var(--bg-input);
+  color: var(--primary);
+  border: 1px dashed var(--primary);
+  padding: 10px;
+  text-align: center;
+  border-radius: var(--radius);
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.btn-import:hover {
+  background-color: rgba(255, 159, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+
+/* --- MANA SYMBOLS --- */
+.mana-container {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.mana-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: -1px 1px 0px rgba(0,0,0,0.3);
+}
+
+.mana-generic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #cac5c0; /* Couleur gris Magic */
+  color: #111;
+  font-weight: bold;
+  font-size: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: -1px 1px 0px rgba(0,0,0,0.3);
+  line-height: 1;
+}

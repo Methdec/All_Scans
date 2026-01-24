@@ -1,0 +1,63 @@
+name: Backend CI
+
+# Déclencheurs : Quand est-ce qu'on lance les tests ?
+on:
+  push:
+    branches: [ "main", "master" ] # À chaque push sur la branche principale
+  pull_request:
+    branches: [ "main", "master" ] # À chaque Pull Request
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    # On lance un "vrai" MongoDB temporaire pour les tests d'intégration
+    services:
+      mongo:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd mongo
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    # 1. GitHub récupère ton code
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # 2. Installation de Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    # 3. Installation des librairies
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # On installe explicitement pytest si jamais il manque au requirements.txt
+        pip install pytest pytest-asyncio httpx
+
+    # 4. Tests Unitaires (Rapides)
+    - name: Run Unit Tests
+      working-directory: ./backend
+      run: python -m pytest tests/unit
+
+    # 5. Tests d'Intégration (Avec la BDD Mongo du service ci-dessus)
+    - name: Run Integration Tests
+      working-directory: ./backend
+      env:
+        MONGO_DB_NAME: All_scans_TEST # Variable d'env pour isoler la BDD
+      run: python -m pytest tests/integration
+
+    # 6. Tests de Performance
+    - name: Run Performance Tests
+      working-directory: ./backend
+      env:
+        MONGO_DB_NAME: All_scans_TEST
+      run: python -m pytest tests/performance
