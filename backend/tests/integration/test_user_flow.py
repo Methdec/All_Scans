@@ -28,10 +28,10 @@ def test_register_and_login_flow():
     res_register = client.post("/auth/register", json=payload_register)
     
     if res_register.status_code != 200:
-        pytest.fail(f"❌ Erreur Inscription : {res_register.json()}")
+        pytest.fail(f"Erreur Inscription : {res_register.json()}")
 
     assert res_register.status_code == 200
-    print("\n✅ Inscription réussie")
+    print("\nInscription réussie")
     
     # --- 2. CONNEXION (LOGIN) ---
     # Ton backend attend du JSON (Body), pas du form-data
@@ -41,11 +41,11 @@ def test_register_and_login_flow():
     })
     
     if res_login.status_code != 200:
-        pytest.fail(f"❌ Erreur Login : {res_login.json()}")
+        pytest.fail(f"Erreur Login : {res_login.json()}")
 
     # Vérification que le cookie a bien été défini par le serveur
     assert "session_token" in res_login.cookies
-    print("✅ Login réussi et Cookie reçu")
+    print("Login réussi et Cookie reçu")
 
     # --- 3. ACCÈS PROTÉGÉ (/ME) ---
     # Pas besoin de header "Authorization". 
@@ -53,12 +53,12 @@ def test_register_and_login_flow():
     res_me = client.get("/auth/me")
     
     if res_me.status_code != 200:
-        pytest.fail(f"❌ Erreur /me : {res_me.json()}")
+        pytest.fail(f"Erreur /me : {res_me.json()}")
     
     data = res_me.json()
     assert data["email"] == email
     assert data["nom"] == nom
-    print("✅ Accès profil réussi via Cookie")
+    print("Accès profil réussi via Cookie")
 
     # --- 4. DÉCONNEXION (LOGOUT) ---
     res_logout = client.post("/auth/logout")
@@ -67,4 +67,4 @@ def test_register_and_login_flow():
     # On vérifie qu'on ne peut plus accéder au profil
     res_me_after = client.get("/auth/me")
     assert res_me_after.status_code == 401
-    print("✅ Déconnexion validée")
+    print("Déconnexion validée")

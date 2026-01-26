@@ -11,12 +11,11 @@ def generate_fake_cards(count):
     """Génère une liste de fausses cartes pour peupler la DB."""
     cards = []
     for i in range(count):
-        # On alterne les couleurs et les types pour simuler de la variété
         color = ["R"] if i % 3 == 0 else (["U"] if i % 3 == 1 else ["G"])
         type_line = "Creature — Goblin" if i % 2 == 0 else "Instant"
         
         cards.append({
-            "user_id": "test_user_12345", # Doit correspondre au user du conftest
+            "user_id": "test_user_12345",
             "card_id": f"fake-card-{i}",
             "name": f"Card Number {i}",
             "colors": color,
@@ -36,7 +35,7 @@ def test_search_speed_large_collection(client):
     """
     
     # 1. PEUPLEMENT DE LA BASE (Batch Insert)
-    print(f"\n⚡ Génération et insertion de {NUM_CARDS_TO_SIMULATE} cartes...")
+    print(f"\nGénération et insertion de {NUM_CARDS_TO_SIMULATE} cartes...")
     fake_data = generate_fake_cards(NUM_CARDS_TO_SIMULATE)
     
     start_insert = time.perf_counter()
@@ -54,7 +53,7 @@ def test_search_speed_large_collection(client):
         "limit": 50
     }
 
-    print("⏱️  Lancement de la recherche...")
+    print("Lancement de la recherche...")
     start_search = time.perf_counter()
     
     response = client.get("/cards/search", params=search_params)

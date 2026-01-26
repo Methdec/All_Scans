@@ -18,7 +18,7 @@ def clean_db_after_tests():
     yield
     client = MongoClient(os.getenv("MONGO_URI", "mongodb://localhost:27017"))
     client.drop_database("All_scans_TEST")
-    print("\n🗑️  Base de données de test 'All_scans_TEST' supprimée.")
+    print("\nBase de données de test 'All_scans_TEST' supprimée.")
 
 @pytest.fixture
 def client():
