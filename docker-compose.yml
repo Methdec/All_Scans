@@ -1,16 +1,24 @@
 version: '3.8'
 
+# On définit un réseau commun pour être sûr qu'ils se voient
+networks:
+  app-network:
+    driver: bridge
+
 services:
   # ----------------------------
   # 1. Base de données MongoDB
   # ----------------------------
   mongo-db:
-    image: mongo:latest
+    image: mongo:4.4
     container_name: all-scans-mongo
+    restart: always
     ports:
-      - "27017:27017" # Accessible aussi depuis ton Windows (pour Compass)
+      - "27017:27017"
     volumes:
-      - mongo-data:/data/db # Pour ne pas perdre les données
+      - mongo-data:/data/db
+    networks:
+      - app-network  # 👈 On le met dans le réseau
 
   # ----------------------------
   # 2. Backend (FastAPI)
@@ -18,16 +26,19 @@ services:
   backend:
     build: ./backend
     container_name: all-scans-backend
+    restart: always
     ports:
-      - "8000:8000" # Mappage du port
+      - "8000:8000"
     environment:
-      # C'est ici qu'on dit au backend de contacter le service 'mongo-db'
-      - MONGO_URI=mongodb://mongo-db:27017/All_scans
+      # L'URI doit correspondre exactement au nom du service "mongo-db"
+      - MONGO_URI=mongodb://mongo-db:27017
+      - MONGO_DB_NAME=All_scans
     depends_on:
       - mongo-db
     volumes:
-      # Permet de modifier le code Python et de voir le changement sans reconstruire
       - ./backend:/app
+    networks:
+      - app-network # 👈 Lui aussi
 
   # ----------------------------
   # 3. Frontend (React)
@@ -37,18 +48,20 @@ services:
     container_name: all-scans-frontend
     ports:
       - "3000:3000"
-    stdin_open: true # Indispensable pour React en Docker (mode interactif)
-    tty: true        # Indispensable pour React en Docker
+    stdin_open: true
+    tty: true
     environment:
-      - CHOKIDAR_USEPOLLING=true # Force le hot-reload sous Windows
+      - CHOKIDAR_USEPOLLING=true
+      # Important pour que le front sache où taper (pour les appels API)
+      - REACT_APP_API_URL=http://localhost:8000
     depends_on:
       - backend
     volumes:
-      # Permet le hot-reload (modifs JS en direct)
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
-      # Empêche d'écraser les node_modules du conteneur avec ceux de Windows
       - /app/node_modules
+    networks:
+      - app-network
 
 volumes:
   mongo-data:
