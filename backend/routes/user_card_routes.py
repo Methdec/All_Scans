@@ -99,11 +99,11 @@ async def perform_import(data: List, user_id: str):
         if identifiers_to_fetch:
             fetched_cards = await fetch_scryfall_batch(identifiers_to_fetch)
 
-        # 4. Insertion DB (C'est là que ça bloque souvent)
+        # 4. Insertion DB (Mise à jour avec nouveaux champs V2)
         imported_count = 0
         
         for idx, scryfall_data in enumerate(fetched_cards):
-            # PAUSE CRITIQUE : À chaque itération DB, on rend la main à la boucle d'événements
+            # PAUSE CRITIQUE : À chaque itération DB, on rend la main
             if idx % 5 == 0:
                 await asyncio.sleep(0.02)
 
@@ -129,26 +129,44 @@ async def perform_import(data: List, user_id: str):
             else:
                 cards_collection.update_one({"id": card_id}, {"$addToSet": {"owners": uid}})
 
-            # B. Carte Utilisateur
+            # B. Carte Utilisateur (Dénormalisation V2)
             existing = user_cards_collection.find_one({"user_id": uid, "card_id": card_id})
             if existing:
                 user_cards_collection.update_one({"_id": existing["_id"]}, {"$inc": {"count": qty}})
             else:
-                # ✅ AJOUT DES DONNÉES DENORMALISÉES (OPTIMISATION RECHERCHE)
+                # ✅ INSÉRER TOUS LES NOUVEAUX CHAMPS ICI
                 user_cards_collection.insert_one({
                     "user_id": uid,
                     "card_id": card_id,
                     "count": qty,
+                    
+                    # Infos essentielles
                     "name": cleaned.get("name"),
+                    "lang": cleaned.get("lang"),
+                    "oracle_id": cleaned.get("oracle_id"),
+                    
+                    # Edition
+                    "set": cleaned.get("set"),
+                    "set_name": cleaned.get("set_name"),
+                    "collector_number": cleaned.get("collector_number"),
+                    
+                    # Visuel
                     "image_normal": cleaned.get("image_normal"),
+                    "image_small": cleaned.get("image_small"),
+                    
+                    # Gameplay
                     "rarity": cleaned.get("rarity"),
                     "colors": cleaned.get("colors", []),
                     "type_line": cleaned.get("type_line", ""),
+                    "oracle_text": cleaned.get("oracle_text", ""),
                     "keywords": cleaned.get("keywords", []),
                     "cmc": cleaned.get("cmc", 0),
                     "power": cleaned.get("power", ""),
                     "toughness": cleaned.get("toughness", ""),
-                    "legalities": cleaned.get("legalities", {})
+                    "legalities": cleaned.get("legalities", {}),
+                    
+                    # Finance
+                    "prices": cleaned.get("prices", {})
                 })
             
             imported_count += 1
@@ -220,21 +238,31 @@ async def add_user_card(request: Request, user_id: str = Depends(get_current_use
         if existing:
             user_cards_collection.update_one({"_id": existing["_id"]}, {"$inc": {"count": 1}})
         else:
-            # ✅ AJOUT DES DONNÉES DENORMALISÉES (POUR LA RECHERCHE INSTANTANÉE)
+            # ✅ AJOUT DES DONNÉES DENORMALISÉES V2
             user_cards_collection.insert_one({
                 "user_id": uid, 
                 "card_id": card_id, 
                 "count": 1,
+                
+                # Mêmes champs enrichis que pour l'import de masse
                 "name": cleaned.get("name"), 
+                "lang": cleaned.get("lang"),
+                "oracle_id": cleaned.get("oracle_id"),
+                "set": cleaned.get("set"),
+                "set_name": cleaned.get("set_name"),
+                "collector_number": cleaned.get("collector_number"),
                 "image_normal": cleaned.get("image_normal"),
+                "image_small": cleaned.get("image_small"),
                 "rarity": cleaned.get("rarity"),
                 "colors": cleaned.get("colors", []),
                 "type_line": cleaned.get("type_line", ""),
+                "oracle_text": cleaned.get("oracle_text", ""),
                 "keywords": cleaned.get("keywords", []),
                 "cmc": cleaned.get("cmc", 0),
                 "power": cleaned.get("power", ""),
                 "toughness": cleaned.get("toughness", ""),
-                "legalities": cleaned.get("legalities", {})
+                "legalities": cleaned.get("legalities", {}),
+                "prices": cleaned.get("prices", {})
             })
         return {"message": "Ajouté"}
     except Exception as e:

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import Loader from "./Loader"; 
+import DeckPickerModal from "./DeckPickerModal"; // ✅ IMPORT
 import "../theme.css"; 
 
 export default function CardModal({ cardId, onClose }) {
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [items, setItems] = useState([]);
-  const [selectedItem, setSelectedItem] = useState("");
+  
+  // States d'édition locale
   const [isEditing, setIsEditing] = useState(false);
   const [editCount, setEditCount] = useState(1);
   const [currentFaceIndex, setCurrentFaceIndex] = useState(0);
@@ -16,25 +17,22 @@ export default function CardModal({ cardId, onClose }) {
   const [hasChanged, setHasChanged] = useState(false);
   const [notification, setNotification] = useState(null); 
 
+  // ✅ Nouveau State pour la modale de choix de deck
+  const [showDeckPicker, setShowDeckPicker] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchAll() {
+    async function fetchCard() {
       setLoading(true);
-      setError("");
       try {
         const cardRes = await fetch(`http://localhost:8000/cards/${cardId}`, { credentials: "include" });
         if (!cardRes.ok) throw new Error("Impossible de charger la carte");
         const cardData = await cardRes.json();
         
-        // C'est cet appel qui va enfin marcher grâce à la correction backend
-        const itemsRes = await fetch("http://localhost:8000/items/all_lists_and_decks", { credentials: "include" });
-        const itemsData = itemsRes.ok ? await itemsRes.json() : { items: [] };
-
         if (!cancelled) {
           setCard(cardData);
           setEditCount(cardData.count || 1);
-          setItems(itemsData.items || []);
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -43,19 +41,17 @@ export default function CardModal({ cardId, onClose }) {
       }
     }
 
-    fetchAll();
+    fetchCard();
     return () => { cancelled = true; };
   }, [cardId]);
 
-  const handleAddCard = async () => {
-    if (!selectedItem) {
-      setNotification({ type: "error", message: "Sélectionne un deck d'abord." });
-      setTimeout(() => setNotification(null), 3000);
-      return;
-    }
+  // ✅ Fonction appelée quand on clique sur un deck dans la liste
+  const handleAddToDeck = async (deckId) => {
+    // 1. Fermer le picker immédiatement pour fluidité
+    setShowDeckPicker(false);
+
     try {
-      // On envoie l'ID (MongoDB ou Scryfall), le backend se chargera de trier
-      const res = await fetch(`http://localhost:8000/items/${selectedItem}/add_card`, {
+      const res = await fetch(`http://localhost:8000/items/${deckId}/add_card`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -63,7 +59,7 @@ export default function CardModal({ cardId, onClose }) {
       });
       if (!res.ok) throw new Error("Erreur ajout");
       
-      setNotification({ type: "success", message: "Carte ajoutée !" });
+      setNotification({ type: "success", message: "Carte ajoutée au deck !" });
       setTimeout(() => setNotification(null), 3000);
     } catch (err) {
       setNotification({ type: "error", message: "Erreur serveur." });
@@ -83,7 +79,6 @@ export default function CardModal({ cardId, onClose }) {
       if (!res.ok) throw new Error("Erreur");
       
       setHasChanged(true); 
-
       setNotification({ type: "success", message: "Quantité mise à jour !" });
       
       setTimeout(() => {
@@ -113,6 +108,13 @@ export default function CardModal({ cardId, onClose }) {
       onClose(hasChanged);
   };
 
+  const renderPrice = () => {
+      if (!card.prices) return null;
+      if (card.prices.eur) return <span style={{color: "var(--success)", fontWeight:"bold"}}>{card.prices.eur} €</span>;
+      if (card.prices.usd) return <span style={{color: "var(--success)"}}>{card.prices.usd} $</span>;
+      return <span style={{color: "var(--text-muted)"}}>--</span>;
+  };
+
   if (loading) return (
       <div className="modal-overlay">
           <div className="modal-box" style={{ justifyContent: "center", alignItems: "center" }}>
@@ -124,12 +126,12 @@ export default function CardModal({ cardId, onClose }) {
   if (error || !card) return null;
 
   return (
+    <>
     <div className="modal-overlay" onClick={(e) => e.target.classList.contains("modal-overlay") && handleManualClose()}>
       <div className="modal-box">
         
         <button onClick={handleManualClose} className="modal-close-btn">Fermer</button>
 
-        {/* Colonne Gauche : Image */}
         <div className="modal-left">
           {hasSeparateFaceImages ? (
             <div style={{ textAlign: "center" }}>
@@ -155,11 +157,16 @@ export default function CardModal({ cardId, onClose }) {
           )}
         </div>
 
-        {/* Colonne Droite : Infos */}
         <div className="modal-right">
-            <h2 style={{ marginTop: 0, color: "var(--primary)", borderBottom: "1px solid var(--border)", paddingBottom: "15px" }}>
+            <h2 style={{ marginTop: 0, color: "var(--primary)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", marginBottom: "10px" }}>
               {card.name}
             </h2>
+            
+            <div style={{ display: "flex", gap: "15px", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "20px" }}>
+                <div><strong>Set:</strong> {card.set_name} <span style={{opacity:0.7}}>({card.set?.toUpperCase()} #{card.collector_number})</span></div>
+                <div><strong>Langue:</strong> {card.lang?.toUpperCase()}</div>
+                <div><strong>Prix:</strong> {renderPrice()}</div>
+            </div>
             
             <div style={{ flex: 1, overflowY: "auto" }}>
               {hasSeparateFaceImages ? (
@@ -180,37 +187,24 @@ export default function CardModal({ cardId, onClose }) {
                   
                   {isEditing ? (
                     <div style={{ display: "flex", gap: 5 }}>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          value={editCount} 
-                          onChange={(e) => setEditCount(parseInt(e.target.value) || 0)} 
-                          style={{ width: 60, padding: 5, borderRadius: "var(--radius)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} 
-                        />
+                        <input type="number" min="0" value={editCount} onChange={(e) => setEditCount(parseInt(e.target.value) || 0)} style={{ width: 60, padding: 5, borderRadius: "var(--radius)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
                         <button onClick={handleUpdateCount} className="btn-primary" style={{ padding: "5px 10px" }}>OK</button>
                         <button onClick={() => setIsEditing(false)} className="btn-secondary" style={{ padding: "5px 10px" }}>X</button>
                     </div>
                   ) : (
-                    <button onClick={() => setIsEditing(true)} className="btn-secondary" style={{ fontSize: "0.85rem" }}>
-                      Modifier
-                    </button>
+                    <button onClick={() => setIsEditing(true)} className="btn-secondary" style={{ fontSize: "0.85rem" }}>Modifier</button>
                   )}
               </div>
 
-              <label style={{ display: "block", marginBottom: 6, color: "var(--text-muted)", fontSize: "0.9rem" }}>Ajouter à un deck :</label>
-              <div style={{ display: "flex", gap: 10 }}>
-                <select 
-                  value={selectedItem} 
-                  onChange={(e) => setSelectedItem(e.target.value)} 
-                  style={{ flex: 1, padding: 10, borderRadius: "var(--radius)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }}
-                >
-                  <option value="">-- Choisir un deck --</option>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>{item.nom} ({item.type})</option>
-                  ))}
-                </select>
-                <button onClick={handleAddCard} className="btn-primary" disabled={!selectedItem}>Ajouter</button>
-              </div>
+              {/* ✅ NOUVEAU BOUTON AJOUT */}
+              <button 
+                onClick={() => setShowDeckPicker(true)} 
+                className="btn-primary" 
+                style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}
+              >
+                <span>🃏</span> Ajouter à un deck...
+              </button>
+
             </div>
         </div>
 
@@ -226,5 +220,14 @@ export default function CardModal({ cardId, onClose }) {
         )}
       </div>
     </div>
+
+    {/* ✅ MODALE DE SÉLECTION DE DECK (s'affiche par dessus) */}
+    {showDeckPicker && (
+        <DeckPickerModal 
+            onClose={() => setShowDeckPicker(false)} 
+            onSelect={handleAddToDeck} 
+        />
+    )}
+    </>
   );
 }

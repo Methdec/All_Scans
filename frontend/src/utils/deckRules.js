@@ -46,97 +46,59 @@ export const DECK_FORMATS = {
   }
 };
 
-const isBasicLand = (card) => {
-  if (!card) return false;
-  const typeLine = card.type_line || "";
-  return typeLine.includes("Basic Land") || 
-         ["Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes"].includes(card.name);
-};
+// Liste des terrains de base pour l'exemption de limite d'exemplaires
+const BASIC_LANDS = [
+    "Plains", "Island", "Swamp", "Mountain", "Forest", 
+    "Snow-Covered Plains", "Snow-Covered Island", "Snow-Covered Swamp", 
+    "Snow-Covered Mountain", "Snow-Covered Forest", 
+    "Wastes"
+];
 
-/**
- * Valide un deck (Polymorphe : accepte un nombre OU une liste)
- * @param {string} formatKey 
- * @param {Array|number} data - Soit la liste des cartes, soit le nombre total
- */
-export const validateDeck = (formatKey, data) => {
-  const rules = DECK_FORMATS[formatKey] || DECK_FORMATS.freeform;
-  
-  let totalCount = 0;
-  let cardsList = null;
+export function validateDeck(format, cards) {
+    const errors = [];
+    
+    // 1. Calcul du nombre total de cartes
+    // On s'assure que quantity est un nombre (base 10)
+    const totalCards = cards.reduce((acc, card) => acc + (parseInt(card.quantity, 10) || 0), 0);
 
-  // 1. DÉTECTION DU TYPE DE DONNÉES
-  if (typeof data === 'number') {
-      // Cas ItemsPage : On a juste le nombre
-      totalCount = data;
-  } else if (Array.isArray(data)) {
-      if (data.length > 0 && typeof data[0] === 'string') {
-          // Cas Liste d'IDs (Backend brut)
-          totalCount = data.length;
-      } else {
-          // Cas DeckDetails : On a les objets complets
-          cardsList = data;
-          totalCount = data.reduce((acc, card) => acc + (card.quantity || 1), 0);
-      }
-  }
+    // --- RÈGLES COMMANDER ---
+    if (format && format.toLowerCase() === "commander") {
+        
+        // Règle 1 : Taille du deck (100 cartes pile)
+        if (totalCards !== 100) {
+            errors.push(`Le deck doit contenir exactement 100 cartes (actuellement : ${totalCards}).`);
+        }
 
-  // --- Règle 1 : Minimum de cartes (Toujours vérifiable) ---
-  if (rules.min && totalCount < rules.min) {
-    return { 
-      isValid: false, 
-      message: `Trop peu de cartes : ${totalCount} / ${rules.min} minimum.`,
-      severity: "error"
-    };
-  }
-
-  // --- Règle 2 : Maximum de cartes ---
-  if (rules.max && totalCount > rules.max) {
-    return { 
-      isValid: false, 
-      message: `Trop de cartes : ${totalCount} / ${rules.max} maximum.`,
-      severity: "error"
-    };
-  }
-  
-  // Cas Commander exact
-  if (rules.max && rules.min === rules.max && totalCount !== rules.min) {
-     return { 
-      isValid: false, 
-      message: `Commander requiert exactement 100 cartes (Actuel: ${totalCount}).`,
-      severity: "error"
-    };
-  }
-
-  // --- Règles Avancées (Vérifiables seulement si on a les objets complets) ---
-  if (cardsList && cardsList.length > 0) {
-      
-      // Règle : Nombre d'exemplaires max
-      if (rules.maxCopies) {
-        for (const card of cardsList) {
-          if (!isBasicLand(card)) {
-            if (card.quantity > rules.maxCopies) {
-              return {
-                isValid: false,
-                message: `Illégal : "${card.name}" est présent ${card.quantity} fois (Max: ${rules.maxCopies}).`,
-                severity: "error"
-              };
+        // Règle 2 : Singleton (1 seul exemplaire par carte, sauf terrains de base)
+        cards.forEach(card => {
+            const isBasic = BASIC_LANDS.includes(card.name);
+            // Si ce n'est pas un terrain de base et qu'il y en a plus de 1
+            if (!isBasic && card.quantity > 1) {
+                errors.push(`"${card.name}" est limité à 1 exemplaire en Commander.`);
             }
-          }
+        });
+    } 
+    
+    // --- RÈGLES STANDARD / MODERN / PIONEER ---
+    else {
+        // Règle 1 : Taille minimum (60 cartes)
+        if (totalCards < 60) {
+            errors.push(`Le deck doit contenir au moins 60 cartes (actuellement : ${totalCards}).`);
         }
-      }
 
-      // Règle : Sets autorisés (Legacy)
-      if (rules.allowedSets && rules.allowedSets.length > 0) {
-        for (const card of cardsList) {
-          if (!card.set_name || !rules.allowedSets.includes(card.set_name)) {
-            return {
-              isValid: false,
-              message: `Édition interdite : "${card.name}" vient de "${card.set_name || 'Inconnu'}".`,
-              severity: "error"
-            };
-          }
-        }
-      }
-  }
+        // Règle 2 : Limite de 4 exemplaires
+        cards.forEach(card => {
+            const isBasic = BASIC_LANDS.includes(card.name);
+            if (!isBasic && card.quantity > 4) {
+                errors.push(`"${card.name}" est limité à 4 exemplaires.`);
+            }
+        });
+    }
 
-  return { isValid: true, message: "Deck valide", severity: "success" };
-};
+    // Retourne l'objet de validation complet
+    return {
+        isValid: errors.length === 0,
+        errors: errors, // C'est ce tableau qui permettra de compter "3 erreurs"
+        message: errors.length > 0 ? "Le deck ne respecte pas les règles." : "Deck valide."
+    };
+}

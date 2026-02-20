@@ -60,7 +60,7 @@ def test_register_and_login_flow():
     assert data["nom"] == nom
     print("Accès profil réussi via Cookie")
 
-    # --- 4. DÉCONNEXION (LOGOUT) ---
+    # --- 4. DÉCONNEXION (LOGOUT) ---   
     res_logout = client.post("/auth/logout")
     assert res_logout.status_code == 200
     

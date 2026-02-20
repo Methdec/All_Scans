@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^27.0.1"
+  },
+  "dependencies": {
+    "recharts": "^3.7.0"
+  }
+}

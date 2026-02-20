@@ -1,12 +1,18 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "../theme.css"; 
 import { validateDeck, DECK_FORMATS } from "../utils/deckRules";
 
 export default function ItemsPage() {
   const [items, setItems] = useState([]);
-  const [currentFolder, setCurrentFolder] = useState(null);
-  const [path, setPath] = useState([]);
+  
+  // Lecture de l'URL pour savoir où on est
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderId = searchParams.get("parent_id");
+
+  const [path, setPath] = useState([]); // Le fil d'ariane visuel
+  
+  // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -16,31 +22,70 @@ export default function ItemsPage() {
 
   const navigate = useNavigate();
 
+  // --- 1. CHARGEMENT DES ITEMS (Contenu du dossier) ---
   const fetchItems = useCallback(async () => {
     try {
-      const url = currentFolder
-        ? `http://localhost:8000/items?parent_id=${currentFolder}`
+      const url = currentFolderId
+        ? `http://localhost:8000/items?parent_id=${currentFolderId}`
         : "http://localhost:8000/items";
+        
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Erreur chargement");
       const data = await res.json();
       setItems(data.items);
     } catch (err) { console.error(err); }
-  }, [currentFolder]);
+  }, [currentFolderId]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  // --- 2. CHARGEMENT DU CHEMIN (Fil d'Ariane Complet) ---
+  const fetchPath = useCallback(async () => {
+      if (!currentFolderId) {
+          setPath([]); // Racine
+          return;
+      }
+      try {
+          // Appel à la nouvelle route Backend qui calcule toute la hiérarchie
+          const res = await fetch(`http://localhost:8000/items/path/${currentFolderId}`, { credentials: "include" });
+          if(res.ok) {
+              const data = await res.json();
+              setPath(data.path || []);
+          }
+      } catch(e) { console.error("Erreur path", e); }
+  }, [currentFolderId]);
+
+  // On lance les deux chargements quand l'ID change
+  useEffect(() => { 
+      fetchItems(); 
+      fetchPath(); 
+  }, [fetchItems, fetchPath]);
+
+
+  // --- NAVIGATION ---
 
   const openFolder = (item) => {
-    setPath([...path, { id: item.id, name: item.nom }]);
-    setCurrentFolder(item.id);
+    // On change juste l'URL, le useEffect fera le reste (chargement items + calcul path)
+    setSearchParams({ parent_id: item.id });
   };
 
-  const goBack = () => {
-    const newPath = [...path];
-    newPath.pop();
-    setPath(newPath);
-    setCurrentFolder(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+  const goRoot = () => {
+      setSearchParams({});
   };
+
+  const goToPathIndex = (folderId) => {
+      setSearchParams({ parent_id: folderId });
+  };
+
+  const goBackOneLevel = () => {
+    if (path.length > 1) {
+        // On va à l'avant-dernier élément du path
+        const parent = path[path.length - 2];
+        setSearchParams({ parent_id: parent.id });
+    } else {
+        // Sinon racine
+        setSearchParams({});
+    }
+  };
+
+  // --- ACTIONS CRUD ---
 
   const handleCreateItem = async (e) => {
     e.preventDefault();
@@ -50,7 +95,7 @@ export default function ItemsPage() {
         nom: newItem.nom,
         image: newItem.type === "folder" ? null : newItem.image,
         type: newItem.type,
-        parent_id: currentFolder,
+        parent_id: currentFolderId,
         ...(newItem.type === "deck" && { format: newItem.format })
       };
       await fetch("http://localhost:8000/items", {
@@ -96,6 +141,7 @@ export default function ItemsPage() {
     setShowImageModal(false);
   };
 
+  // --- RENDU ITEM ---
   const renderItem = (item) => {
     let validation = null;
     if (item.type === "deck") {
@@ -109,17 +155,18 @@ export default function ItemsPage() {
              <div title={validation.message} style={{ position: "absolute", top: -5, left: -5, background: "var(--danger)", color: "white", borderRadius: "50%", width: 20, height: 20, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>!</div>
           )}
 
-          {/* Bouton Suppression */}
-          <button className="delete-btn" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(item); }}>
-            ✕
-          </button>
+          {/* Bouton Suppression : UNIQUEMENT POUR LES DOSSIERS */}
+          {item.type !== "deck" && (
+            <button className="delete-btn" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(item); }}>
+                ✕
+            </button>
+          )}
 
           {/* Image ou Icône */}
           {item.image ? (
             <img src={item.image} alt={item.nom} className="item-image" />
           ) : (
             <div className="item-image" style={{background: "var(--bg-input)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)"}}>
-                {/* Icône SVG simple pour remplacer l'emoji */}
                 {item.type === "folder" ? (
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
                 ) : (
@@ -132,6 +179,7 @@ export default function ItemsPage() {
           
           {item.type === "deck" && (
               <div style={{ fontSize: "0.8rem", color: "var(--primary)", marginTop: 2 }}>
+                  {item.is_constructed ? "🏗️ " : ""} 
                   {item.cards ? item.cards.length : 0} cartes
               </div>
           )}
@@ -146,21 +194,42 @@ export default function ItemsPage() {
           <button className="btn-primary" onClick={() => setShowCreateModal(true)}>+ Nouveau</button>
       </div>
 
-      {/* Fil d'ariane */}
-      <div style={{ marginBottom: "20px", color: "var(--text-muted)" }}>
-        <span onClick={() => { setPath([]); setCurrentFolder(null); }} style={{ cursor: "pointer", color: "var(--primary)" }}>Racine</span>
+      {/* Fil d'ariane Amélioré */}
+      <div style={{ marginBottom: "20px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        <span onClick={goRoot} style={{ cursor: "pointer", color: !currentFolderId ? "var(--text-main)" : "var(--primary)", fontWeight: !currentFolderId ? "bold" : "normal" }}>
+            Racine
+        </span>
+        
         {path.map((p, i) => (
-          <span key={p.id}> / <span style={{ cursor: "pointer" }} onClick={() => { /* navigation logic inside render if needed */ }}>{p.name}</span></span>
+          <span key={p.id} style={{display: "flex", gap: 5, alignItems: "center"}}>
+             <span>/</span>
+             {/* Le dernier élément est en gras (courant), les autres sont cliquables */}
+             {i === path.length - 1 ? (
+                 <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{p.name}</span>
+             ) : (
+                 <span 
+                    style={{ cursor: "pointer", color: "var(--primary)" }} 
+                    onClick={() => goToPathIndex(p.id)}
+                 >
+                    {p.name}
+                 </span>
+             )}
+          </span>
         ))}
-        {path.length > 0 && <button className="btn-secondary" onClick={goBack} style={{float: "right"}}>Retour</button>}
+
+        {currentFolderId && (
+            <button className="btn-secondary" onClick={goBackOneLevel} style={{marginLeft: "auto", padding: "4px 10px", fontSize: "0.8rem"}}>
+                ↑ Remonter
+            </button>
+        )}
       </div>
 
       {/* Grille */}
       <div className="items-grid">
-        {items.length > 0 ? items.map(renderItem) : <p style={{ color: "var(--text-muted)" }}>Dossier vide.</p>}
+        {items.length > 0 ? items.map(renderItem) : <p style={{ color: "var(--text-muted)", width: "100%", textAlign: "center", marginTop: 40 }}>Dossier vide.</p>}
       </div>
 
-      {/* Modales */}
+      {/* --- MODALES --- */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: 400 }}>
@@ -206,8 +275,38 @@ export default function ItemsPage() {
           </div>
         </div>
       )}
-      
-      {/* Autres modales inchangées dans la logique mais utilisent maintenant le CSS global */}
+
+      {/* MODALE SUPPRESSION */}
+      {showDeleteModal && (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{width: 350}}>
+                  <h3>Supprimer ?</h3>
+                  <p>Voulez-vous vraiment supprimer <strong>{itemToDelete?.nom}</strong> ?</p>
+                  <p style={{fontSize: "0.8rem", color: "var(--text-muted)"}}>Si c'est un dossier, tout son contenu sera perdu.</p>
+                  <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
+                      <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Annuler</button>
+                      <button className="btn-danger" onClick={handleDeleteItem}>Supprimer</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* MODALE IMAGE */}
+      {showImageModal && (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{ width: "80%", height: "80%", display: "flex", flexDirection: "column" }}>
+                  <h3>Choisir une image</h3>
+                  <div style={{ overflowY: "auto", flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 10 }}>
+                      {userCards.map(c => (
+                          c.image_normal && <img key={c.id} src={c.image_normal} alt={c.name} onClick={() => handleSelectImage(c.image_normal)} style={{width: "100%", cursor: "pointer", borderRadius: 8}} />
+                      ))}
+                  </div>
+                  <div style={{marginTop: 20, textAlign: "right"}}>
+                      <button className="btn-secondary" onClick={() => setShowImageModal(false)}>Fermer</button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,6 @@ import CardSearchBar from "./components/CardSearchBar";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import CardDetails from "./components/CardDetails";
 import ItemsPage from "./components/ItemsPage";
 import DeckDetails from "./components/DeckDetails"; 
 
@@ -125,7 +124,6 @@ function App() {
             <Route path="/items" element={<ProtectedRoute><ItemsPage /></ProtectedRoute>} />
             <Route path="/items/:id" element={<ProtectedRoute><DeckDetails /></ProtectedRoute>}/>
             <Route path="/cards" element={<ProtectedRoute><CardsList /></ProtectedRoute>} />
-            <Route path="/card/:cardId" element={<ProtectedRoute><CardDetails /></ProtectedRoute>} />
             
             <Route
               path="/profile"
