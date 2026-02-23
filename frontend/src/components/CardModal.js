@@ -202,7 +202,7 @@ export default function CardModal({ cardId, onClose }) {
                 className="btn-primary" 
                 style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}
               >
-                <span>🃏</span> Ajouter à un deck...
+                Ajouter à un deck...
               </button>
 
             </div>

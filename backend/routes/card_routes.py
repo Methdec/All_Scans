@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from database import cards_collection, user_cards_collection
 from routes.auth_routes import get_current_user
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import re
 
@@ -11,6 +11,40 @@ router = APIRouter()
 # --- MODELES Pydantic ---
 class CardBatchRequest(BaseModel):
     card_ids: List[str]
+
+# --- FONCTION UTILITAIRE (Pour Force/Endurance) ---
+def build_comparison_query(value: str, operator: str):
+    """
+    Transforme une valeur "4" et un opérateur ">=" en requête Mongo {"$gte": 4}
+    Gère le cas où la force est "*" ou un non-nombre.
+    """
+    try:
+        # On tente de convertir en nombre pour faire des maths
+        numeric_value = float(value)
+        is_numeric = True
+    except ValueError:
+        # Si c'est "*", "1+*", etc., on reste en string
+        numeric_value = value
+        is_numeric = False
+
+    mongo_ops = {
+        "=": "$eq",
+        ">": "$gt",
+        ">=": "$gte",
+        "<": "$lt",
+        "<=": "$lte",
+        "!=": "$ne"
+    }
+    
+    op_code = mongo_ops.get(operator, "$eq")
+    
+    # Si l'opérateur est mathématique mais la valeur est du texte (ex: ">" sur "*"),
+    # MongoDB ne pourra pas trier correctement, on force l'égalité string par sécurité
+    # sauf si c'est vraiment un nombre.
+    if not is_numeric and operator in [">", ">=", "<", "<="]:
+        return value # Fallback simple
+
+    return {op_code: numeric_value}
 
 # --- ROUTES ---
 
@@ -45,26 +79,43 @@ async def get_cards_batch(payload: CardBatchRequest, user_id: str = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 2. RECHERCHE AVANCEE (Optimisée avec champs locaux)
+# 2. RECHERCHE AVANCEE (Optimisée)
 @router.get("/cards/search")
 async def search_user_cards(
     request: Request,
     user_id: str = Depends(get_current_user),
-    name: str = None,
-    rarity: str = None,
-    colors: str = None,
-    type_line: str = None,
-    keywords: str = None,
-    cmc: float = None,
-    power: str = None,
-    toughness: str = None,
-    format_legality: str = None,
+    # Champs basiques
+    name: Optional[str] = None,
+    rarity: Optional[str] = None,
+    
+    # Gestion des Couleurs
+    colors: Optional[str] = None,
+    color_mode: str = Query("exact", description="exact ou subset"), # NOUVEAU
+
+    type_line: Optional[str] = None,
+    keywords: Optional[str] = None,
+    cmc: Optional[float] = None,
+    
+    # Oracle Text
+    oracle_text: Optional[str] = None,
+    
+    # Force & Endurance (Avec Opérateurs)
+    power: Optional[str] = None,
+    power_op: str = "=",      # par défaut "="
+    toughness: Optional[str] = None,
+    toughness_op: str = "=",  # par défaut "="
+    
+    # Légalité
+    format_legality: Optional[str] = None, # ex: "commander"
+    is_legal: Optional[bool] = None,       # True = doit être legal, False = doit être banned/not_legal
+    
+    # Tri et Pagination
     sort_by: str = "name",
     page: int = 1,
     limit: int = 200
 ):
     try:
-        # ETAPE 1 : Filtrage sur la collection User (Rapide)
+        # ETAPE 1 : Filtrage sur la collection User
         pipeline = [
             {"$match": {"user_id": user_id}}
         ]
@@ -75,26 +126,40 @@ async def search_user_cards(
         if name:
             match_filters["name"] = {"$regex": re.escape(name), "$options": "i"}
 
-        # 2. Rareté
+        # 2. Oracle Text
+        if oracle_text:
+            match_filters["oracle_text"] = {"$regex": re.escape(oracle_text), "$options": "i"}
+
+        # 3. Rareté
         if rarity:
             match_filters["rarity"] = rarity
 
-        # 3. Couleurs (Logique stricte)
+        # 4. Couleurs (Logique Exact vs Subset)
         if colors:
             raw_colors = [c.strip() for c in colors.split(",")]
+            
+            # Cas Incolore (C)
             if "C" in raw_colors:
                 match_filters["colors"] = {"$size": 0}
             else:
-                # Cette syntaxe dit : 
-                # 1. Contient TOUTES ces couleurs ($all)
-                # 2. La taille est exactement celle demandée ($size)
-                # C'est la seule façon fiable de faire une égalité stricte de tableau en MongoDB
-                match_filters["$and"] = [
-                    {"colors": {"$all": raw_colors}},
-                    {"colors": {"$size": len(raw_colors)}}
-                ]
+                if color_mode == "exact":
+                    # Mode STRICT : Contient TOUTES ces couleurs ($all) ET la taille est identique
+                    # Ex: U,R -> Uniquement Izzet
+                    match_filters["$and"] = [
+                        {"colors": {"$all": raw_colors}},
+                        {"colors": {"$size": len(raw_colors)}}
+                    ]
+                else: 
+                    # Mode APPROXIMATIF (Subset) :
+                    # La carte ne doit contenir AUCUNE couleur qui N'EST PAS dans la liste brute.
+                    # Ex: U,R -> Mono U, Mono R, Izzet, Incolore sont valides.
+                    # Mais on exclut les Incolores si "C" n'est pas demandé explicitement pour être précis.
+                    match_filters["colors"] = {
+                        "$not": {"$elemMatch": {"$nin": raw_colors}},
+                        "$ne": [] # Exclut les incolores purs (sauf si l'user voulait C, géré au dessus)
+                    }
 
-        # 4. Types (Inclusion / Exclusion)
+        # 5. Types (Inclusion / Exclusion)
         if type_line:
             types = [t.strip() for t in type_line.split(",") if t.strip()]
             type_conditions = []
@@ -102,10 +167,8 @@ async def search_user_cards(
                 if t.startswith("-"):
                     clean_type = t[1:].strip()
                     if clean_type:
-                        # "ne contient pas ce type"
                         type_conditions.append({"type_line": {"$not": {"$regex": re.escape(clean_type), "$options": "i"}}})
                 else:
-                    # "contient ce type"
                     type_conditions.append({"type_line": {"$regex": re.escape(t), "$options": "i"}})
             
             if type_conditions:
@@ -113,17 +176,28 @@ async def search_user_cards(
                     match_filters["$and"] = []
                 match_filters["$and"].extend(type_conditions)
 
-        # 5. Autres filtres
+        # 6. Autres filtres simples
         if keywords:
             match_filters["keywords"] = {"$regex": re.escape(keywords), "$options": "i"}
         if cmc is not None:
             match_filters["cmc"] = float(cmc)
-        if power:
-            match_filters["power"] = power
-        if toughness:
-            match_filters["toughness"] = toughness
+
+        # 7. Force et Endurance
+        if power is not None:
+            match_filters["power"] = build_comparison_query(power, power_op)
+        
+        if toughness is not None:
+            match_filters["toughness"] = build_comparison_query(toughness, toughness_op)
+
+        # 8. Légalité
         if format_legality:
-            match_filters[f"legalities.{format_legality}"] = {"$in": ["legal", "restricted"]}
+            field_path = f"legalities.{format_legality.lower()}"
+            if is_legal is True:
+                match_filters[field_path] = {"$in": ["legal", "restricted"]}
+            elif is_legal is False:
+                match_filters[field_path] = {"$in": ["not_legal", "banned"]}
+            else:
+                match_filters[field_path] = {"$in": ["legal", "restricted"]}
 
         # Application des filtres
         if match_filters:
@@ -154,10 +228,12 @@ async def search_user_cards(
                         "$project": {
                             "_id": 1,
                             "count": 1,
-                            "name": 1, # On prend le nom local
-                            "rarity": 1, # On prend la rareté locale
+                            "name": 1,
+                            "rarity": 1,
                             "colors": 1,
-                            # On complète avec les détails globaux si besoin d'images
+                            "oracle_text": 1,
+                            "power": 1,
+                            "toughness": 1,
                             "image_normal": "$details.image_normal",
                             "set_name": "$details.set_name",
                             "id": "$details.id",
@@ -184,7 +260,7 @@ async def search_user_cards(
 # 3. ROUTE PAR DEFAUT
 @router.get("/cards")
 async def get_all_cards(user_id: str = Depends(get_current_user)):
-    return await search_user_cards(Request, user_id, page=1, limit=200)
+    return await search_user_cards(Request, user_id=user_id, page=1, limit=200)
 
 # 4. GET SINGLE CARD
 @router.get("/cards/{card_id}")
@@ -209,8 +285,11 @@ async def delete_card(card_id: str, user_id: str = Depends(get_current_user)):
         if ObjectId.is_valid(card_id):
             c = cards_collection.find_one({"_id": ObjectId(card_id)})
             if c: target_id = c.get("id")
+            
         res = user_cards_collection.delete_one({"user_id": user_id, "card_id": target_id})
+        
         cards_collection.update_one({"id": target_id}, {"$pull": {"owners": user_id}})
+        
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Introuvable")
         return {"message": "Supprimé"}
