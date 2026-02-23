@@ -77,4 +77,4 @@ Ces tests valident l'expérience utilisateur finale sur le Frontend (React).
 À la racine du dossier `backend/` :
 
 ```bash
-pytest
+python -m pytest
