@@ -11,9 +11,9 @@ import "../App.css";
 function CardGrid({ cards, renderAction, onCardClick, clickableCards = true }) {
   const getImageUrl = (card) => {
     // Cherche l'image dans cet ordre de priorité :
-    // 3. Depuis MongoDB (collection) : image_normal
-    // 1. Depuis Scryfall API (cartes normales) : image_uris.normal
-    // 2. Depuis Scryfall API (cartes multi-faces) : card_faces[0].image_uris.normal
+    // 1. Depuis MongoDB (collection) : image_normal
+    // 2. Depuis Scryfall API (cartes normales) : image_uris.normal
+    // 3. Depuis Scryfall API (cartes multi-faces) : card_faces[0].image_uris.normal
     return (
       card.image_normal ||
       card.image_uris?.normal ||
@@ -23,15 +23,22 @@ function CardGrid({ cards, renderAction, onCardClick, clickableCards = true }) {
     );
   };
 
-  if (cards.length === 0) {
-    return <p>Aucune carte trouvée.</p>;
+  if (!cards || cards.length === 0) {
+    return <p style={{ color: "var(--text-muted)", width: "100%", textAlign: "center" }}>Aucune carte trouvée.</p>;
   }
 
   return (
-    <div className="cards-grid">
+    <div 
+      className="cards-grid"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+        gap: "20px"
+      }}
+    >
       {cards.map((card) => {
         const imageUrl = getImageUrl(card);
-        const cardId = card.id; // Utiliser l'id Scryfall au lieu de _id MongoDB
+        const cardId = card.id || card._id; // Gère à la fois l'id Scryfall et l'id MongoDB
 
         return (
           <div
@@ -41,25 +48,94 @@ function CardGrid({ cards, renderAction, onCardClick, clickableCards = true }) {
               if (clickableCards) onCardClick?.(cardId);
             }}
             style={{
+              backgroundColor: "var(--bg-input, #1e1e1e)",
+              borderRadius: "10px",
+              padding: "12px",
               cursor: clickableCards ? "pointer" : "default",
-              borderRadius: "8px",
-              transition: "transform 0.2s",
+              display: "flex",
+              flexDirection: "column",
+              border: "2px solid transparent",
+              transition: "border-color 0.2s, transform 0.2s",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.3)"
             }}
-            onMouseOver={(e) => {
-              if (clickableCards) e.currentTarget.style.transform = "scale(1.05)";
+            onMouseEnter={(e) => {
+              if (clickableCards) {
+                e.currentTarget.style.borderColor = "var(--primary, #FF9800)";
+                e.currentTarget.style.transform = "translateY(-4px)";
+              }
             }}
-            onMouseOut={(e) => {
-              if (clickableCards) e.currentTarget.style.transform = "scale(1)";
+            onMouseLeave={(e) => {
+              if (clickableCards) {
+                e.currentTarget.style.borderColor = "transparent";
+                e.currentTarget.style.transform = "translateY(0)";
+              }
             }}
           >
-            <p>
-              <strong>{card.name}</strong>
-              {card.count && ` ×${card.count}`}
-            </p>
-            {imageUrl && (
-              <img src={imageUrl} alt={card.name} className="card-image" />
-            )}
-            {renderAction && renderAction(card)}
+            {/* 1. Image de la carte (en haut) */}
+            <div style={{ position: "relative", width: "100%", marginBottom: "12px" }}>
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={card.name}
+                  style={{ 
+                    width: "100%", 
+                    height: "auto", 
+                    borderRadius: "4.75% / 3.5%", // Ratio fidèle aux vraies cartes
+                    display: "block" 
+                  }}
+                />
+              ) : (
+                <div style={{ 
+                  width: "100%", 
+                  aspectRatio: "2.5/3.5", 
+                  backgroundColor: "#333", 
+                  borderRadius: "8px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  color: "#666" 
+                }}>
+                  Pas d'image
+                </div>
+              )}
+            </div>
+
+            {/* 2. Informations sous la carte */}
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-end" }}>
+              
+              {/* Nom de la carte */}
+              <div style={{ 
+                fontWeight: "bold", 
+                color: "var(--text-main, #fff)", 
+                fontSize: "0.95rem", 
+                textAlign: "center", 
+                marginBottom: "6px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }} title={card.name}>
+                {card.name}
+              </div>
+              
+              {/* Ligne du bas : Set (à gauche) et Action (à droite) */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ 
+                  color: "var(--text-muted, #aaa)", 
+                  fontSize: "0.8rem", 
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  flex: 1
+                }} title={card.set_name}>
+                  {card.set_name}
+                </span>
+                
+                {/* Zone d'action (Bouton d'ajout, label de quantité x1, etc.) */}
+                {renderAction && renderAction(card)}
+              </div>
+              
+            </div>
           </div>
         );
       })}

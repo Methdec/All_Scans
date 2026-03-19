@@ -4,7 +4,6 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid 
 } from 'recharts';
 
-// Couleurs pour les graphiques
 const CHART_COLORS = {
     White: "#F0E6BC", Blue: "#42a5f5", Black: "#5e5e5e", 
     Red: "#ef5350", Green: "#66bb6a", Colorless: "#b0bec5", Multicolor: "#ffd54f"
@@ -14,7 +13,6 @@ const TYPE_COLORS = [
   "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6"
 ];
 
-// Styles
 const controlContainerStyle = {
     background: "var(--bg-main)", padding: "4px", borderRadius: "8px", 
     display: "flex", gap: "5px", border: "1px solid var(--border)"
@@ -55,14 +53,32 @@ export default function DeckStats({ deck, onUpdate }) {
   const [includeColorlessInPie, setIncludeColorlessInPie] = useState(false);
   const [loadingLands, setLoadingLands] = useState(false);
 
+  // --- MODALE GENERIQUE ---
+  const [infoModal, setInfoModal] = useState({
+      isOpen: false,
+      type: "info", // "info", "confirm", "success", "error"
+      title: "",
+      message: "",
+      onConfirm: null
+  });
+
   const cards = useMemo(() => deck?.cards || [], [deck]);
+  
+  const closeInfoModal = () => setInfoModal({ isOpen: false, type: "info", title: "", message: "", onConfirm: null });
 
-  // --- APPEL DE LA NOUVELLE ROUTE BACKEND ---
-  const handleAutoBalanceLands = async () => {
-    if (!window.confirm("Calculer et ajuster automatiquement les terrains basiques selon la couleur de vos sorts ?\n\nCela utilisera des terrains génériques si vous n'en avez pas.")) {
-        return;
-    }
+  // --- EQUILIBRAGE TERRAINS SANS ALERTE ---
+  const promptAutoBalance = () => {
+    setInfoModal({
+        isOpen: true,
+        type: "confirm",
+        title: "Equilibrage des terrains",
+        message: "Calculer et ajuster automatiquement les terrains basiques selon la couleur de vos sorts ?\n\nCela utilisera des terrains generiques si votre collection ne suffit pas.",
+        onConfirm: executeAutoBalanceLands
+    });
+  };
 
+  const executeAutoBalanceLands = async () => {
+    closeInfoModal();
     setLoadingLands(true);
     try {
         const res = await fetch(`http://localhost:8000/items/${deck.id}/auto_balance_lands`, {
@@ -75,25 +91,28 @@ export default function DeckStats({ deck, onUpdate }) {
 
         if (!res.ok) throw new Error(data.detail || "Erreur serveur");
 
-        // On affiche un résumé uniquement s'il y a eu des actions
         if (data.logs && data.logs.length > 0) {
-            alert("Ajustements effectués :\n\n" + data.logs.join("\n"));
+            setInfoModal({
+                isOpen: true, type: "success", title: "Ajustements effectues", message: data.logs.join("\n")
+            });
         } else if (data.message) {
-            alert(data.message);
+            setInfoModal({
+                isOpen: true, type: "info", title: "Information", message: data.message
+            });
         }
 
-        // Rafraichir le deck parent
         if (onUpdate) await onUpdate();
 
     } catch (e) {
         console.error(e);
-        alert("Erreur : " + e.message);
+        setInfoModal({
+            isOpen: true, type: "error", title: "Erreur", message: e.message
+        });
     } finally {
         setLoadingLands(false);
     }
   };
 
-  // --- CALCULS GRAPHIQUES ---
   const manaCurveData = useMemo(() => {
     const data = Array.from({ length: 8 }, (_, i) => ({
       cmc: i === 7 ? "7+" : i.toString(),
@@ -105,7 +124,6 @@ export default function DeckStats({ deck, onUpdate }) {
     if (!cards) return data;
 
     cards.forEach(card => {
-        // On ignore les terrains pour la courbe de mana
         if (!card.type_line || card.type_line.includes("Land")) return;
 
         let cmc = Math.floor(card.cmc || 0);
@@ -180,31 +198,26 @@ export default function DeckStats({ deck, onUpdate }) {
       return Object.keys(counts).filter(key => counts[key] > 0).map(key => ({ name: key, value: counts[key], color: CHART_COLORS[key] }));
   }, [cards, includeColorlessInPie]);
 
-
-  // --- RENDU ---
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       
-      {/* BOUTON ACTION */}
       <div style={{ marginBottom: 10, padding: 20, border: "1px dashed var(--border)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255, 255, 255, 0.02)" }}>
             <div>
                 <h4 style={{ margin: "0 0 5px 0", color: "var(--text-main)" }}>Gestion des Terrains</h4>
                 <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-muted)" }}>
-                    Ajoute automatiquement les terrains basiques manquants (Basé sur la couleur).
+                    Ajoute automatiquement les terrains basiques manquants (Base sur la couleur).
                 </p>
             </div>
             <button 
-                onClick={handleAutoBalanceLands} 
+                onClick={promptAutoBalance} 
                 disabled={loadingLands}
                 className="btn-primary" 
                 style={{ display: "flex", alignItems: "center", gap: 10, opacity: loadingLands ? 0.7 : 1 }}
             >
-                <span>{loadingLands ? "Calcul en cours..." : "⚖️ Équilibrer"}</span>
+                <span>{loadingLands ? "Calcul en cours..." : "Equilibrer"}</span>
             </button>
       </div>
 
-      {/* --- GRAPHIQUES --- */}
-      {/* Note: On force une hauteur explicite (height: 320px) sur le div parent pour éviter le bug width(-1) */}
       <div className="stat-card">
           <h3>
               Courbe de Mana
@@ -244,7 +257,7 @@ export default function DeckStats({ deck, onUpdate }) {
                    <div style={{fontSize: "1.8rem", fontWeight: "bold", color: "var(--primary)"}}>{statsMetrics.mean}</div>
                </div>
                <div style={{textAlign: "center"}}>
-                   <span style={{color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px"}}>Médiane</span>
+                   <span style={{color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px"}}>Mediane</span>
                    <div style={{fontSize: "1.8rem", fontWeight: "bold", color: "var(--primary)"}}>{statsMetrics.median}</div>
                </div>
           </div>
@@ -252,7 +265,7 @@ export default function DeckStats({ deck, onUpdate }) {
 
       <div className="stats-grid">
           <div className="stat-card">
-               <h3>Répartition par Type</h3>
+               <h3>Repartition par Type</h3>
                <div style={{ width: "100%", height: 250 }}>
                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                        <PieChart>
@@ -268,7 +281,7 @@ export default function DeckStats({ deck, onUpdate }) {
 
           <div className="stat-card">
                <h3>
-                   Coûts de Mana
+                   Couts de Mana
                    <div style={controlContainerStyle}>
                        <button onClick={() => setIncludeColorlessInPie(!includeColorlessInPie)} style={getButtonStyle(includeColorlessInPie)}>
                             {includeColorlessInPie ? "Avec Incolore" : "Sans Incolore"}
@@ -288,6 +301,36 @@ export default function DeckStats({ deck, onUpdate }) {
                </div>
           </div>
       </div>
+
+      {/* --- MODALE D'INFORMATION / CONFIRMATION GENERIQUE --- */}
+      {infoModal.isOpen && (
+          <div className="modal-overlay" onClick={infoModal.type !== "confirm" ? closeInfoModal : null}>
+              <div className="modal-box" style={{ width: "450px", flexDirection: "column", padding: "25px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                  <h3 style={{ 
+                      marginTop: 0, 
+                      color: infoModal.type === "error" ? "var(--danger)" : infoModal.type === "success" ? "var(--success)" : "var(--primary)" 
+                  }}>
+                      {infoModal.title}
+                  </h3>
+                  
+                  <div style={{ color: "var(--text-main)", fontSize: "0.95rem", whiteSpace: "pre-line", lineHeight: 1.6, margin: "15px 0 25px 0", textAlign: "left", background: "var(--bg-input)", padding: "15px", borderRadius: "8px", maxHeight: "200px", overflowY: "auto" }}>
+                      {infoModal.message}
+                  </div>
+                  
+                  <div style={{ display: "flex", justifyContent: "center", gap: "15px", width: "100%" }}>
+                      {infoModal.type === "confirm" ? (
+                          <>
+                              <button onClick={closeInfoModal} className="btn-secondary" style={{ flex: 1 }}>Annuler</button>
+                              <button onClick={infoModal.onConfirm} className="btn-primary" style={{ flex: 1 }}>Confirmer</button>
+                          </>
+                      ) : (
+                          <button onClick={closeInfoModal} className="btn-primary" style={{ width: "100%" }}>Fermer</button>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 }

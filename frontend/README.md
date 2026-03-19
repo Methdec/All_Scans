@@ -5,7 +5,7 @@ Cette application React permet aux joueurs de gérer leur inventaire physique, d
 
 ## Fonctionnalités Clés
 
-* **Gestion d'Inventaire** : Importation de listes, recherche par filtres (couleurs, rareté, type) et visualisation des cartes.
+* **Gestion d'Inventaire & Recherche Avancée** : Importation de listes et moteur de recherche ultra-complet (texte d'oracle, couleurs exactes ou approximatives, opérateurs mathématiques pour la force/endurance, légalité par format).
 * **Deckbuilder Avancé** : Création de decks, ajout de cartes via modales, et distinction entre decks **Virtuels** (Listes) et **Construits** (Physiques).
 * **Statistiques Visuelles** : Graphiques interactifs pour la courbe de mana et la répartition des couleurs (*Recharts*).
 * **Auto-Balance** : Algorithme intelligent pour calculer et ajuster automatiquement la base de mana (Terrains).
@@ -13,14 +13,18 @@ Cette application React permet aux joueurs de gérer leur inventaire physique, d
 
 ## Stack Technique
 
-* **Framework** : React.js (Create React App)
+* **Framework** : React.js 18 (Create React App)
 * **Routing** : React Router DOM v6
 * **Graphiques** : Recharts
 * **Styles** : CSS Modules & Variables CSS (Thème sombre)
+* **Requêtes API** : Fetch API avec AbortController pour l'optimisation des requêtes.
 
-## Installation & Démarrage
+## Prérequis
 
-Assurez-vous d'avoir [Node.js](https://nodejs.org/) installé.
+* [Node.js](https://nodejs.org/) (version 18 recommandée) si exécution en local.
+* [Docker](https://www.docker.com/) et Docker Compose si exécution conteneurisée.
+
+## Installation & Démarrage (Local)
 
 ### 1. Installation des dépendances
 Dans le dossier du frontend, lancez :

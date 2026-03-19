@@ -1,29 +1,25 @@
+# routes/card_routes.py
 from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from database import cards_collection, user_cards_collection
+from models.card import extract_card_fields
 from routes.auth_routes import get_current_user
 from bson import ObjectId
 from typing import List, Optional
 from pydantic import BaseModel
 import re
+import httpx
+
 
 router = APIRouter()
 
-# --- MODELES Pydantic ---
 class CardBatchRequest(BaseModel):
     card_ids: List[str]
 
-# --- FONCTION UTILITAIRE (Pour Force/Endurance) ---
 def build_comparison_query(value: str, operator: str):
-    """
-    Transforme une valeur "4" et un opérateur ">=" en requête Mongo {"$gte": 4}
-    Gère le cas où la force est "*" ou un non-nombre.
-    """
     try:
-        # On tente de convertir en nombre pour faire des maths
         numeric_value = float(value)
         is_numeric = True
     except ValueError:
-        # Si c'est "*", "1+*", etc., on reste en string
         numeric_value = value
         is_numeric = False
 
@@ -38,17 +34,11 @@ def build_comparison_query(value: str, operator: str):
     
     op_code = mongo_ops.get(operator, "$eq")
     
-    # Si l'opérateur est mathématique mais la valeur est du texte (ex: ">" sur "*"),
-    # MongoDB ne pourra pas trier correctement, on force l'égalité string par sécurité
-    # sauf si c'est vraiment un nombre.
     if not is_numeric and operator in [">", ">=", "<", "<="]:
-        return value # Fallback simple
+        return value
 
     return {op_code: numeric_value}
 
-# --- ROUTES ---
-
-# 1. RECUPERATION PAR LOT (Pour les Decks)
 @router.post("/cards/batch")
 async def get_cards_batch(payload: CardBatchRequest, user_id: str = Depends(get_current_user)):
     try:
@@ -78,88 +68,57 @@ async def get_cards_batch(payload: CardBatchRequest, user_id: str = Depends(get_
         print(f"Error batch cards: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# 2. RECHERCHE AVANCEE (Optimisée)
 @router.get("/cards/search")
 async def search_user_cards(
     request: Request,
     user_id: str = Depends(get_current_user),
-    # Champs basiques
     name: Optional[str] = None,
     rarity: Optional[str] = None,
-    
-    # Gestion des Couleurs
     colors: Optional[str] = None,
-    color_mode: str = Query("exact", description="exact ou subset"), # NOUVEAU
-
+    color_mode: str = Query("exact", description="exact ou subset"),
     type_line: Optional[str] = None,
     keywords: Optional[str] = None,
     cmc: Optional[float] = None,
-    
-    # Oracle Text
     oracle_text: Optional[str] = None,
-    
-    # Force & Endurance (Avec Opérateurs)
     power: Optional[str] = None,
-    power_op: str = "=",      # par défaut "="
+    power_op: str = "=",
     toughness: Optional[str] = None,
-    toughness_op: str = "=",  # par défaut "="
-    
-    # Légalité
-    format_legality: Optional[str] = None, # ex: "commander"
-    is_legal: Optional[bool] = None,       # True = doit être legal, False = doit être banned/not_legal
-    
-    # Tri et Pagination
+    toughness_op: str = "=",
+    format_legality: Optional[str] = None,
+    is_legal: Optional[bool] = None,
     sort_by: str = "name",
     page: int = 1,
     limit: int = 200
 ):
     try:
-        # ETAPE 1 : Filtrage sur la collection User
-        pipeline = [
-            {"$match": {"user_id": user_id}}
-        ]
-
+        pipeline = [{"$match": {"user_id": user_id}}]
         match_filters = {}
 
-        # 1. Nom
         if name:
             match_filters["name"] = {"$regex": re.escape(name), "$options": "i"}
 
-        # 2. Oracle Text
         if oracle_text:
             match_filters["oracle_text"] = {"$regex": re.escape(oracle_text), "$options": "i"}
 
-        # 3. Rareté
         if rarity:
             match_filters["rarity"] = rarity
 
-        # 4. Couleurs (Logique Exact vs Subset)
         if colors:
             raw_colors = [c.strip() for c in colors.split(",")]
-            
-            # Cas Incolore (C)
             if "C" in raw_colors:
                 match_filters["colors"] = {"$size": 0}
             else:
                 if color_mode == "exact":
-                    # Mode STRICT : Contient TOUTES ces couleurs ($all) ET la taille est identique
-                    # Ex: U,R -> Uniquement Izzet
                     match_filters["$and"] = [
                         {"colors": {"$all": raw_colors}},
                         {"colors": {"$size": len(raw_colors)}}
                     ]
                 else: 
-                    # Mode APPROXIMATIF (Subset) :
-                    # La carte ne doit contenir AUCUNE couleur qui N'EST PAS dans la liste brute.
-                    # Ex: U,R -> Mono U, Mono R, Izzet, Incolore sont valides.
-                    # Mais on exclut les Incolores si "C" n'est pas demandé explicitement pour être précis.
                     match_filters["colors"] = {
                         "$not": {"$elemMatch": {"$nin": raw_colors}},
-                        "$ne": [] # Exclut les incolores purs (sauf si l'user voulait C, géré au dessus)
+                        "$ne": []
                     }
 
-        # 5. Types (Inclusion / Exclusion)
         if type_line:
             types = [t.strip() for t in type_line.split(",") if t.strip()]
             type_conditions = []
@@ -176,20 +135,18 @@ async def search_user_cards(
                     match_filters["$and"] = []
                 match_filters["$and"].extend(type_conditions)
 
-        # 6. Autres filtres simples
         if keywords:
             match_filters["keywords"] = {"$regex": re.escape(keywords), "$options": "i"}
+        
         if cmc is not None:
             match_filters["cmc"] = float(cmc)
 
-        # 7. Force et Endurance
         if power is not None:
             match_filters["power"] = build_comparison_query(power, power_op)
         
         if toughness is not None:
             match_filters["toughness"] = build_comparison_query(toughness, toughness_op)
 
-        # 8. Légalité
         if format_legality:
             field_path = f"legalities.{format_legality.lower()}"
             if is_legal is True:
@@ -199,11 +156,9 @@ async def search_user_cards(
             else:
                 match_filters[field_path] = {"$in": ["legal", "restricted"]}
 
-        # Application des filtres
         if match_filters:
             pipeline.append({"$match": match_filters})
 
-        # ETAPE 2 : Pagination et Tri
         skip = (page - 1) * limit
         sort_field = "name" if sort_by == "name" else sort_by
 
@@ -214,7 +169,6 @@ async def search_user_cards(
                     {"$sort": {sort_field: 1}},
                     {"$skip": skip},
                     {"$limit": limit},
-                    # ETAPE 3 : Join pour récupérer l'image et infos manquantes
                     {
                         "$lookup": {
                             "from": "Cards",
@@ -228,6 +182,7 @@ async def search_user_cards(
                         "$project": {
                             "_id": 1,
                             "count": 1,
+                            "is_foil": 1, # AJOUT MAJEUR : Le frontend peut desormais voir si la carte est Foil
                             "name": 1,
                             "rarity": 1,
                             "colors": 1,
@@ -235,8 +190,9 @@ async def search_user_cards(
                             "power": 1,
                             "toughness": 1,
                             "image_normal": "$details.image_normal",
+                            "image_art_crop": "$details.image_art_crop", # Ajout pour preparer l'avatar utilisateur !
                             "set_name": "$details.set_name",
-                            "id": "$details.id",
+                            "id": "$details.id"
                         }
                     }
                 ]
@@ -257,46 +213,83 @@ async def search_user_cards(
         print(f"Search error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 3. ROUTE PAR DEFAUT
 @router.get("/cards")
 async def get_all_cards(user_id: str = Depends(get_current_user)):
     return await search_user_cards(Request, user_id=user_id, page=1, limit=200)
 
-# 4. GET SINGLE CARD
 @router.get("/cards/{card_id}")
-async def get_single_card(card_id: str, user_id: str = Depends(get_current_user)):
+async def get_single_card(card_id: str, is_foil: Optional[bool] = None, user_id: str = Depends(get_current_user)):
     try:
         query = {"_id": ObjectId(card_id)} if ObjectId.is_valid(card_id) else {"id": card_id}
         card = cards_collection.find_one(query)
-        if not card: raise HTTPException(status_code=404, detail="Carte non trouvée")
-        uc = user_cards_collection.find_one({"user_id": user_id, "card_id": card["id"]})
-        card["_id"] = str(card["_id"])
+        
+        # --- FALLBACK SCRYFALL SECURISE ---
+        if not card and not ObjectId.is_valid(card_id):
+            try:
+                # Scryfall bloque souvent si on ne met pas de User-Agent
+                headers = {"User-Agent": "MyMTGApp/1.0", "Accept": "application/json"}
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.get(f"https://api.scryfall.com/cards/{card_id}", headers=headers)
+                    if resp.status_code == 200:
+                        cleaned = extract_card_fields(resp.json())
+                        cards_collection.insert_one(cleaned)
+                        card = cleaned
+                    else:
+                        raise HTTPException(status_code=404, detail=f"Non trouve sur Scryfall (Code: {resp.status_code})")
+            except Exception as fallback_err:
+                print(f"Erreur de telechargement Scryfall: {fallback_err}")
+                raise HTTPException(status_code=500, detail=f"Erreur de telechargement depuis Scryfall: {str(fallback_err)}")
+
+        if not card:
+            raise HTTPException(status_code=404, detail="Carte non trouvee dans la base")
+        
+        uc_query = {"user_id": user_id, "card_id": card["id"]}
+        if is_foil is not None:
+            uc_query["is_foil"] = is_foil
+
+        uc = user_cards_collection.find_one(uc_query)
+        
+        if "_id" in card:
+            card["_id"] = str(card["_id"])
+            
         card["count"] = uc["count"] if uc else 0
         card["owned"] = uc is not None
+        card["is_foil"] = uc["is_foil"] if uc and "is_foil" in uc else (is_foil or False)
+        
         return card
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-# 5. DELETE CARD
 @router.delete("/cards/{card_id}")
-async def delete_card(card_id: str, user_id: str = Depends(get_current_user)):
+async def delete_card(card_id: str, is_foil: Optional[bool] = None, user_id: str = Depends(get_current_user)):
     try:
         target_id = card_id
         if ObjectId.is_valid(card_id):
             c = cards_collection.find_one({"_id": ObjectId(card_id)})
-            if c: target_id = c.get("id")
-            
-        res = user_cards_collection.delete_one({"user_id": user_id, "card_id": target_id})
+            if c:
+                target_id = c.get("id")
         
-        cards_collection.update_one({"id": target_id}, {"$pull": {"owners": user_id}})
+        uc_query = {"user_id": user_id, "card_id": target_id}
+        if is_foil is not None:
+            uc_query["is_foil"] = is_foil
+
+        res = user_cards_collection.delete_one(uc_query)
+        
+        # Nettoyage global uniquement si l'utilisateur ne possede plus AUCUNE version de la carte
+        remaining = user_cards_collection.count_documents({"user_id": user_id, "card_id": target_id})
+        if remaining == 0:
+            cards_collection.update_one({"id": target_id}, {"$pull": {"owners": user_id}})
         
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Introuvable")
-        return {"message": "Supprimé"}
+        return {"message": "Supprime"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 6. UPDATE MULTIFACES
 @router.post("/cards/update-multifaces")
 async def update_multiface_cards(user_id: str = Depends(get_current_user)):
-    return {"message": "Non implémenté"}
+    return {"message": "Non implemente"}

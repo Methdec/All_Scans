@@ -1,28 +1,40 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "../theme.css"; 
-import { validateDeck, DECK_FORMATS } from "../utils/deckRules";
+import { DECK_FORMATS } from "../utils/deckRules";
+import Loader from "./Loader";
 
 export default function ItemsPage() {
   const [items, setItems] = useState([]);
+  const [allFolders, setAllFolders] = useState([]); 
   
-  // Lecture de l'URL pour savoir où on est
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get("parent_id");
-
-  const [path, setPath] = useState([]); // Le fil d'ariane visuel
+  const [path, setPath] = useState([]); 
   
-  // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newItem, setNewItem] = useState({ nom: "", type: "folder", format: "standard" });
+
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]); 
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveTargetId, setMoveTargetId] = useState("");
+  
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteType, setDeleteType] = useState("single"); 
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [newItem, setNewItem] = useState({ nom: "", image: "", type: "folder", format: "standard" });
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [userCards, setUserCards] = useState([]);
+  const [deleteInput, setDeleteInput] = useState("");
+
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
+  const [infoModal, setInfoModal] = useState({ isOpen: false, type: "info", title: "", message: "" });
+
+  const [showImportDeckModal, setShowImportDeckModal] = useState(false);
+  const [importDeckData, setImportDeckData] = useState({ nom: "", format: "standard", decklist: "" });
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null); 
 
   const navigate = useNavigate();
 
-  // --- 1. CHARGEMENT DES ITEMS (Contenu du dossier) ---
   const fetchItems = useCallback(async () => {
     try {
       const url = currentFolderId
@@ -36,14 +48,12 @@ export default function ItemsPage() {
     } catch (err) { console.error(err); }
   }, [currentFolderId]);
 
-  // --- 2. CHARGEMENT DU CHEMIN (Fil d'Ariane Complet) ---
   const fetchPath = useCallback(async () => {
       if (!currentFolderId) {
-          setPath([]); // Racine
+          setPath([]); 
           return;
       }
       try {
-          // Appel à la nouvelle route Backend qui calcule toute la hiérarchie
           const res = await fetch(`http://localhost:8000/items/path/${currentFolderId}`, { credentials: "include" });
           if(res.ok) {
               const data = await res.json();
@@ -52,40 +62,50 @@ export default function ItemsPage() {
       } catch(e) { console.error("Erreur path", e); }
   }, [currentFolderId]);
 
-  // On lance les deux chargements quand l'ID change
+  const fetchAllFolders = useCallback(async () => {
+      try {
+          const res = await fetch("http://localhost:8000/items/folders/all", { credentials: "include" });
+          if (res.ok) {
+              const data = await res.json();
+              setAllFolders(data.folders || []);
+          }
+      } catch(e) { console.error("Erreur chargement dossiers", e); }
+  }, []);
+
   useEffect(() => { 
       fetchItems(); 
       fetchPath(); 
-  }, [fetchItems, fetchPath]);
-
-
-  // --- NAVIGATION ---
+      fetchAllFolders();
+  }, [fetchItems, fetchPath, fetchAllFolders]);
 
   const openFolder = (item) => {
-    // On change juste l'URL, le useEffect fera le reste (chargement items + calcul path)
     setSearchParams({ parent_id: item.id });
+    setIsSelectionMode(false);
+    setSelectedItems([]);
   };
 
   const goRoot = () => {
       setSearchParams({});
+      setIsSelectionMode(false);
+      setSelectedItems([]);
   };
 
   const goToPathIndex = (folderId) => {
       setSearchParams({ parent_id: folderId });
+      setIsSelectionMode(false);
+      setSelectedItems([]);
   };
 
   const goBackOneLevel = () => {
     if (path.length > 1) {
-        // On va à l'avant-dernier élément du path
         const parent = path[path.length - 2];
         setSearchParams({ parent_id: parent.id });
     } else {
-        // Sinon racine
         setSearchParams({});
     }
+    setIsSelectionMode(false);
+    setSelectedItems([]);
   };
-
-  // --- ACTIONS CRUD ---
 
   const handleCreateItem = async (e) => {
     e.preventDefault();
@@ -93,7 +113,6 @@ export default function ItemsPage() {
     try {
       const payload = {
         nom: newItem.nom,
-        image: newItem.type === "folder" ? null : newItem.image,
         type: newItem.type,
         parent_id: currentFolderId,
         ...(newItem.type === "deck" && { format: newItem.format })
@@ -105,13 +124,16 @@ export default function ItemsPage() {
         body: JSON.stringify(payload),
       });
       await fetchItems();
-      setNewItem({ nom: "", image: "", type: "folder", format: "standard" });
+      if (newItem.type === "folder") fetchAllFolders();
+      setNewItem({ nom: "", type: "folder", format: "standard" });
       setShowCreateModal(false);
     } catch (err) { console.error(err); }
   };
 
   const confirmDeleteItem = (item) => {
     setItemToDelete(item);
+    setDeleteType("single");
+    setDeleteInput("");
     setShowDeleteModal(true);
   };
 
@@ -122,49 +144,193 @@ export default function ItemsPage() {
         credentials: "include",
       });
       await fetchItems();
+      if (itemToDelete.type === "folder") fetchAllFolders();
+      
+      // --- CORRECTION : Fermeture de l'onglet individuel ---
+      const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");
+      const updatedDecks = storedDecks.filter(d => d.id !== itemToDelete.id);
+      localStorage.setItem("openDecks", JSON.stringify(updatedDecks));
+      window.dispatchEvent(new Event("decksUpdated"));
+
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err) { console.error(err); }
   };
 
-  const openImagePicker = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/usercards", { credentials: "include" });
-      const data = await res.json();
-      setUserCards(data.cards || []);
-      setShowImageModal(true);
-    } catch (err) { console.error(err); }
+  const toggleSelectionMode = () => {
+      setIsSelectionMode(!isSelectionMode);
+      if (isSelectionMode) setSelectedItems([]); 
   };
 
-  const handleSelectImage = (img) => {
-    setNewItem({ ...newItem, image: img });
-    setShowImageModal(false);
+  const toggleItemSelection = (id) => {
+      setSelectedItems(prev => 
+          prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      );
   };
 
-  // --- RENDU ITEM ---
+  const handleBulkMove = async (e) => {
+      e.preventDefault();
+      if (selectedItems.length === 0) return;
+
+      try {
+          for (const id of selectedItems) {
+              const res = await fetch(`http://localhost:8000/items/${id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ parent_id: moveTargetId || null })
+              });
+              
+              if (!res.ok) {
+                  const errorData = await res.json();
+                  throw new Error(errorData.detail || "Erreur de deplacement");
+              }
+          }
+          await fetchItems();
+          fetchAllFolders();
+          setShowMoveModal(false);
+          setSelectedItems([]);
+          setIsSelectionMode(false);
+          setMoveTargetId("");
+      } catch (err) {
+          setShowMoveModal(false);
+          setErrorModal({ isOpen: true, message: err.message });
+      }
+  };
+
+  const confirmBulkDelete = () => {
+      if (selectedItems.length === 0) return;
+      setDeleteType("bulk");
+      setDeleteInput("");
+      setShowDeleteModal(true);
+  };
+
+  const executeBulkDelete = async () => {
+      try {
+          for (const id of selectedItems) {
+              await fetch(`http://localhost:8000/items/${id}`, {
+                  method: "DELETE",
+                  credentials: "include",
+              });
+          }
+          await fetchItems();
+          fetchAllFolders();
+          
+          // --- CORRECTION : Fermeture des onglets multiples ---
+          const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");
+          const updatedDecks = storedDecks.filter(d => !selectedItems.includes(d.id));
+          localStorage.setItem("openDecks", JSON.stringify(updatedDecks));
+          window.dispatchEvent(new Event("decksUpdated"));
+
+          setSelectedItems([]);
+          setIsSelectionMode(false);
+          setShowDeleteModal(false);
+      } catch (err) {
+          console.error("Erreur suppression multiple", err);
+      }
+  };
+
+  const handleImportFileChange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          setImportDeckData(prev => ({ ...prev, decklist: event.target.result }));
+      };
+      reader.readAsText(file);
+  };
+
+  const handleImportDeck = async (e) => {
+      e.preventDefault();
+      if (!importDeckData.nom.trim() || !importDeckData.decklist.trim()) return;
+      setIsImporting(true);
+      
+      try {
+          const payload = {
+              nom: importDeckData.nom,
+              format: importDeckData.format,
+              decklist: importDeckData.decklist,
+              parent_id: currentFolderId
+          };
+          
+          const res = await fetch("http://localhost:8000/items/import_deck", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(payload),
+          });
+          
+          if (!res.ok) throw new Error("Erreur d'importation");
+          
+          const data = await res.json();
+          await fetchItems();
+          
+          if (data.missing_cards && data.missing_cards.length > 0) {
+              setImportResult(data.missing_cards);
+          } else {
+              setShowImportDeckModal(false);
+              setImportDeckData({ nom: "", format: "standard", decklist: "" });
+              setInfoModal({ isOpen: true, type: "success", title: "Succes", message: "Le deck a ete importe avec succes." });
+          }
+      } catch (err) {
+          setErrorModal({ isOpen: true, message: "Erreur lors de l'importation du deck. Veuillez verifier votre liste." });
+      } finally {
+          setIsImporting(false);
+      }
+  };
+
+  const closeImportModal = () => {
+      setShowImportDeckModal(false);
+      setImportResult(null);
+      setImportDeckData({ nom: "", format: "standard", decklist: "" });
+  };
+
   const renderItem = (item) => {
-    let validation = null;
-    if (item.type === "deck") {
-        validation = validateDeck(item.format, item.cards || []);
-    }
+    const isSelected = selectedItems.includes(item.id);
 
     return (
-        <div key={item.id} className="item-card" onClick={() => item.type === "folder" ? openFolder(item) : navigate(`/items/${item.id}`)}>
-          {/* Badge Validation */}
-          {validation && !validation.isValid && (
-             <div title={validation.message} style={{ position: "absolute", top: -5, left: -5, background: "var(--danger)", color: "white", borderRadius: "50%", width: 20, height: 20, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>!</div>
+        <div 
+            key={item.id} 
+            className="item-card" 
+            onClick={() => {
+                if (isSelectionMode) {
+                    toggleItemSelection(item.id);
+                } else {
+                    item.type === "folder" ? openFolder(item) : navigate(`/deck/${item.id}`);
+                }
+            }}
+            style={{
+                position: "relative",
+                border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border)",
+                transform: isSelected ? "translateY(-4px)" : "none",
+                boxShadow: isSelected ? "0 8px 16px rgba(0,0,0,0.4)" : "none"
+            }}
+        >
+          {isSelectionMode && (
+              <div style={{
+                  position: "absolute", top: 10, right: 10, width: 22, height: 22, 
+                  borderRadius: "4px", border: "2px solid var(--primary)",
+                  background: isSelected ? "var(--primary)" : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5
+              }}>
+                  {isSelected && <span style={{ color: "white", fontSize: "16px", fontWeight: "bold", marginTop: "-2px" }}>✓</span>}
+              </div>
           )}
 
-          {/* Bouton Suppression : UNIQUEMENT POUR LES DOSSIERS */}
-          {item.type !== "deck" && (
+          {item.type !== "deck" && !isSelectionMode && (
             <button className="delete-btn" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(item); }}>
-                ✕
+                X
             </button>
           )}
 
-          {/* Image ou Icône */}
           {item.image ? (
-            <img src={item.image} alt={item.nom} className="item-image" />
+            <img 
+                src={item.image} 
+                alt={item.nom} 
+                className="item-image" 
+                style={{ objectFit: "cover", objectPosition: "center" }} 
+            />
           ) : (
             <div className="item-image" style={{background: "var(--bg-input)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)"}}>
                 {item.type === "folder" ? (
@@ -179,7 +345,7 @@ export default function ItemsPage() {
           
           {item.type === "deck" && (
               <div style={{ fontSize: "0.8rem", color: "var(--primary)", marginTop: 2 }}>
-                  {item.is_constructed ? "🏗️ " : ""} 
+                  {item.is_constructed ? "(Construit) " : ""} 
                   {item.cards ? item.cards.length : 0} cartes
               </div>
           )}
@@ -189,12 +355,38 @@ export default function ItemsPage() {
 
   return (
     <div style={{ padding: "20px" }}>
+      
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{margin: 0, color: "var(--primary)"}}>Bibliothèque</h2>
-          <button className="btn-primary" onClick={() => setShowCreateModal(true)}>+ Nouveau</button>
+          <h2 style={{margin: 0, color: "var(--primary)"}}>Bibliotheque</h2>
+          
+          <div style={{ display: "flex", gap: "10px" }}>
+              <button 
+                  className={isSelectionMode ? "btn-primary" : "btn-secondary"} 
+                  onClick={toggleSelectionMode}
+              >
+                  {isSelectionMode ? "Annuler la selection" : "Selectionner"}
+              </button>
+              {!isSelectionMode && (
+                  <>
+                      <button className="btn-secondary" onClick={() => setShowImportDeckModal(true)}>Importer un Deck</button>
+                      <button className="btn-primary" onClick={() => setShowCreateModal(true)}>+ Nouveau</button>
+                  </>
+              )}
+          </div>
       </div>
 
-      {/* Fil d'ariane Amélioré */}
+      {isSelectionMode && selectedItems.length > 0 && (
+          <div style={{ background: "var(--bg-input)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border)", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
+                  {selectedItems.length} element(s) selectionne(s)
+              </span>
+              <div style={{ display: "flex", gap: "10px" }}>
+                  <button className="btn-secondary" onClick={() => setShowMoveModal(true)}>Deplacer</button>
+                  <button className="btn-danger" onClick={confirmBulkDelete}>Supprimer</button>
+              </div>
+          </div>
+      )}
+
       <div style={{ marginBottom: "20px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
         <span onClick={goRoot} style={{ cursor: "pointer", color: !currentFolderId ? "var(--text-main)" : "var(--primary)", fontWeight: !currentFolderId ? "bold" : "normal" }}>
             Racine
@@ -203,7 +395,6 @@ export default function ItemsPage() {
         {path.map((p, i) => (
           <span key={p.id} style={{display: "flex", gap: 5, alignItems: "center"}}>
              <span>/</span>
-             {/* Le dernier élément est en gras (courant), les autres sont cliquables */}
              {i === path.length - 1 ? (
                  <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{p.name}</span>
              ) : (
@@ -217,26 +408,24 @@ export default function ItemsPage() {
           </span>
         ))}
 
-        {currentFolderId && (
+        {currentFolderId && !isSelectionMode && (
             <button className="btn-secondary" onClick={goBackOneLevel} style={{marginLeft: "auto", padding: "4px 10px", fontSize: "0.8rem"}}>
-                ↑ Remonter
+                Remonter
             </button>
         )}
       </div>
 
-      {/* Grille */}
       <div className="items-grid">
         {items.length > 0 ? items.map(renderItem) : <p style={{ color: "var(--text-muted)", width: "100%", textAlign: "center", marginTop: 40 }}>Dossier vide.</p>}
       </div>
 
-      {/* --- MODALES --- */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: 400 }}>
-            <h3 style={{marginTop:0}}>Créer un élément</h3>
+            <h3 style={{marginTop:0}}>Creer un element</h3>
             <form onSubmit={handleCreateItem}>
               <label style={{display: "block", marginBottom: 5}}>Nom</label>
-              <input type="text" value={newItem.nom} onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })} autoFocus style={{width: "93%", marginBottom: 15}} />
+              <input type="text" value={newItem.nom} onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })} autoFocus style={{width: "93%", marginBottom: 15, padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} />
 
               <label style={{display: "block", marginBottom: 5}}>Type</label>
               <div style={{display: "flex", gap: 10, marginBottom: 15}}>
@@ -247,62 +436,237 @@ export default function ItemsPage() {
               {newItem.type === "deck" && (
                   <div style={{marginBottom: 15}}>
                       <label style={{display: "block", marginBottom: 5}}>Format</label>
-                      <select value={newItem.format} onChange={(e) => setNewItem({...newItem, format: e.target.value})} style={{width: "100%"}}>
+                      <select value={newItem.format} onChange={(e) => setNewItem({...newItem, format: e.target.value})} style={{width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}>
                           {Object.entries(DECK_FORMATS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
                       </select>
                   </div>
               )}
 
-              {newItem.type === "deck" && (
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={{display: "block", marginBottom: 5}}>Image</label>
-                  {newItem.image ? (
-                    <div style={{ position: "relative" }}>
-                      <img src={newItem.image} alt="Preview" style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: "var(--radius)" }} />
-                      <button type="button" onClick={() => setNewItem({ ...newItem, image: "" })} className="btn-danger" style={{ position: "absolute", top: 5, right: 5 }}>Supprimer</button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={openImagePicker} className="btn-secondary" style={{width: "100%"}}>Choisir une carte</button>
-                  )}
-                </div>
-              )}
-
               <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
                 <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>Annuler</button>
-                <button type="submit" className="btn-primary">Créer</button>
+                <button type="submit" className="btn-primary">Creer</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE SUPPRESSION */}
+      {showImportDeckModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: 500 }}>
+            {isImporting ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0" }}>
+                    <Loader />
+                    <p style={{ marginTop: "20px", color: "var(--text-main)", fontWeight: "bold" }}>Analyse et construction du deck en cours...</p>
+                </div>
+            ) : importResult ? (
+                <div>
+                    <h3 style={{marginTop:0, color: "var(--primary)"}}>Importation partielle</h3>
+                    <p style={{color: "var(--text-main)", fontSize: "0.9rem", lineHeight: 1.5}}>Le deck a bien ete cree, mais certaines cartes n'ont pas pu etre trouvees dans la base de donnees (nom incorrect ou syntaxe non reconnue) :</p>
+                    
+                    <div style={{ background: "var(--bg-input)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", maxHeight: "200px", overflowY: "auto", marginBottom: "15px", fontSize: "0.85rem", color: "var(--danger)" }}>
+                        <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                            {importResult.map((c, i) => (
+                                <li key={i} style={{ marginBottom: "4px" }}>
+                                    <strong>{c.qty}x</strong> {c.name} <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({c.zone})</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    
+                    <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+                        <button type="button" className="btn-primary" onClick={closeImportModal}>Terminer</button>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <h3 style={{marginTop:0}}>Importer une liste de Deck</h3>
+                    <form onSubmit={handleImportDeck}>
+                      <div style={{display: "flex", gap: "10px", marginBottom: "15px"}}>
+                          <div style={{flex: 2}}>
+                              <label style={{display: "block", marginBottom: 5}}>Nom du deck</label>
+                              <input 
+                                  type="text" 
+                                  value={importDeckData.nom} 
+                                  onChange={(e) => setImportDeckData({ ...importDeckData, nom: e.target.value })} 
+                                  autoFocus 
+                                  style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} 
+                              />
+                          </div>
+                          <div style={{flex: 1}}>
+                              <label style={{display: "block", marginBottom: 5}}>Format</label>
+                              <select 
+                                  value={importDeckData.format} 
+                                  onChange={(e) => setImportDeckData({...importDeckData, format: e.target.value})} 
+                                  style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}
+                              >
+                                  {Object.entries(DECK_FORMATS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
+                              </select>
+                          </div>
+                      </div>
+
+                      <div style={{marginBottom: 15}}>
+                          <label style={{display: "block", marginBottom: 5}}>Fichier (.txt, .csv, .dek)</label>
+                          <input 
+                              type="file" 
+                              accept=".txt,.csv,.dek" 
+                              onChange={handleImportFileChange} 
+                              style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} 
+                          />
+                      </div>
+
+                      <div style={{textAlign: "center", marginBottom: "15px", color: "var(--text-muted)", fontSize: "0.9rem", fontWeight: "bold"}}>OU</div>
+
+                      <div style={{marginBottom: 15}}>
+                          <label style={{display: "block", marginBottom: 5}}>Liste (Copier/Coller)</label>
+                          <textarea 
+                              value={importDeckData.decklist} 
+                              onChange={(e) => setImportDeckData({ ...importDeckData, decklist: e.target.value })} 
+                              placeholder="Ex:&#10;4 Lightning Bolt&#10;1 Black Lotus"
+                              style={{width: "100%", height: "150px", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)", resize: "vertical"}}
+                          />
+                      </div>
+
+                      <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
+                        <button type="button" className="btn-secondary" onClick={closeImportModal}>Annuler</button>
+                        <button type="submit" className="btn-primary" disabled={!importDeckData.nom.trim() || !importDeckData.decklist.trim()}>
+                            Importer
+                        </button>
+                      </div>
+                    </form>
+                </>
+            )}
+          </div>
+        </div>
+      )}
+
       {showDeleteModal && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{width: 350}}>
-                  <h3>Supprimer ?</h3>
-                  <p>Voulez-vous vraiment supprimer <strong>{itemToDelete?.nom}</strong> ?</p>
-                  <p style={{fontSize: "0.8rem", color: "var(--text-muted)"}}>Si c'est un dossier, tout son contenu sera perdu.</p>
+              <div className="modal-content" style={{width: 450, border: "1px solid var(--danger)"}}>
+                  <h3 style={{marginTop:0, color: "var(--danger)"}}>Suppression definitive</h3>
+                  
+                  {deleteType === "single" ? (
+                      <>
+                          <p>Voulez-vous vraiment supprimer <strong>{itemToDelete?.nom}</strong> ?</p>
+                          {itemToDelete?.type === "folder" && (
+                              <p style={{fontSize: "0.85rem", color: "var(--text-muted)"}}>Attention : Tout le contenu de ce dossier sera perdu a jamais.</p>
+                          )}
+                          <div style={{ marginBottom: 20, marginTop: 15 }}>
+                              <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>{itemToDelete?.nom}</strong> pour confirmer :</label>
+                              <input 
+                                  type="text" 
+                                  placeholder={itemToDelete?.nom} 
+                                  value={deleteInput} 
+                                  onChange={e => setDeleteInput(e.target.value)} 
+                                  autoFocus
+                                  style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteInput === itemToDelete?.nom ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} 
+                              />
+                          </div>
+                      </>
+                  ) : (
+                      <>
+                          <p>Voulez-vous vraiment supprimer les <strong>{selectedItems.length} elements</strong> selectionnes ?</p>
+                          
+                          <div style={{ background: "var(--bg-input)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", maxHeight: "120px", overflowY: "auto", marginBottom: "15px", fontSize: "0.85rem", color: "var(--text-main)" }}>
+                              <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                                  {items.filter(item => selectedItems.includes(item.id)).map(item => (
+                                      <li key={item.id} style={{ marginBottom: "4px" }}>
+                                          {item.nom} <span style={{ color: "var(--text-muted)" }}>({item.type === "folder" ? "Dossier" : "Deck"})</span>
+                                      </li>
+                                  ))}
+                              </ul>
+                          </div>
+                          
+                          <p style={{fontSize: "0.85rem", color: "var(--text-muted)", marginTop: 0}}>Attention : Le contenu des dossiers selectionnes sera egalement perdu a jamais.</p>
+                          <div style={{ marginBottom: 20, marginTop: 15 }}>
+                              <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
+                              <input 
+                                  type="text" 
+                                  placeholder="SUPPRIMER" 
+                                  value={deleteInput} 
+                                  onChange={e => setDeleteInput(e.target.value)} 
+                                  autoFocus
+                                  style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteInput === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} 
+                              />
+                          </div>
+                      </>
+                  )}
+
                   <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
                       <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Annuler</button>
-                      <button className="btn-danger" onClick={handleDeleteItem}>Supprimer</button>
+                      
+                      {deleteType === "single" ? (
+                          <button 
+                              className="btn-secondary" 
+                              style={{ background: deleteInput === itemToDelete?.nom ? "var(--danger)" : "var(--bg-input)", color: deleteInput === itemToDelete?.nom ? "white" : "var(--text-muted)", border: "none", cursor: deleteInput === itemToDelete?.nom ? "pointer" : "not-allowed" }} 
+                              disabled={deleteInput !== itemToDelete?.nom} 
+                              onClick={handleDeleteItem}
+                          >
+                              Confirmer la suppression
+                          </button>
+                      ) : (
+                          <button 
+                              className="btn-secondary" 
+                              style={{ background: deleteInput === "SUPPRIMER" ? "var(--danger)" : "var(--bg-input)", color: deleteInput === "SUPPRIMER" ? "white" : "var(--text-muted)", border: "none", cursor: deleteInput === "SUPPRIMER" ? "pointer" : "not-allowed" }} 
+                              disabled={deleteInput !== "SUPPRIMER"} 
+                              onClick={executeBulkDelete}
+                          >
+                              Confirmer la suppression
+                          </button>
+                      )}
                   </div>
               </div>
           </div>
       )}
 
-      {/* MODALE IMAGE */}
-      {showImageModal && (
+      {showMoveModal && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{ width: "80%", height: "80%", display: "flex", flexDirection: "column" }}>
-                  <h3>Choisir une image</h3>
-                  <div style={{ overflowY: "auto", flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 10 }}>
-                      {userCards.map(c => (
-                          c.image_normal && <img key={c.id} src={c.image_normal} alt={c.name} onClick={() => handleSelectImage(c.image_normal)} style={{width: "100%", cursor: "pointer", borderRadius: 8}} />
-                      ))}
+              <div className="modal-content" style={{width: 400}}>
+                  <h3 style={{marginTop:0}}>Deplacer la selection</h3>
+                  <form onSubmit={handleBulkMove}>
+                      <div style={{ marginBottom: 20 }}>
+                          <label style={{display: "block", marginBottom: 5}}>Vers le dossier :</label>
+                          <select 
+                              value={moveTargetId} 
+                              onChange={(e) => setMoveTargetId(e.target.value)}
+                              style={{width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}
+                          >
+                              <option value="">Racine (Aucun dossier)</option>
+                              {allFolders
+                                  .filter(f => !selectedItems.includes(f.id)) 
+                                  .map(f => (
+                                  <option key={f.id} value={f.id}>{f.nom}</option>
+                              ))}
+                          </select>
+                      </div>
+                      <div style={{display: "flex", justifyContent: "flex-end", gap: 10}}>
+                          <button type="button" className="btn-secondary" onClick={() => setShowMoveModal(false)}>Annuler</button>
+                          <button type="submit" className="btn-primary">Deplacer</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
+      {errorModal.isOpen && (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{width: 350, border: "1px solid var(--danger)"}}>
+                  <h3 style={{marginTop:0, color: "var(--danger)"}}>Erreur</h3>
+                  <p style={{color: "var(--text-main)", lineHeight: 1.5}}>{errorModal.message}</p>
+                  <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+                      <button className="btn-secondary" onClick={() => setErrorModal({ isOpen: false, message: "" })}>Fermer</button>
                   </div>
-                  <div style={{marginTop: 20, textAlign: "right"}}>
-                      <button className="btn-secondary" onClick={() => setShowImageModal(false)}>Fermer</button>
+              </div>
+          </div>
+      )}
+      
+      {infoModal.isOpen && (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{width: 350, border: "1px solid var(--success)"}}>
+                  <h3 style={{marginTop:0, color: "var(--success)"}}>{infoModal.title}</h3>
+                  <p style={{color: "var(--text-main)", lineHeight: 1.5}}>{infoModal.message}</p>
+                  <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+                      <button className="btn-primary" onClick={() => setInfoModal({ isOpen: false, type: "info", title: "", message: "" })}>Fermer</button>
                   </div>
               </div>
           </div>

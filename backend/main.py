@@ -6,10 +6,11 @@ from routes.card_routes import router as card_router
 from routes.auth_routes import router as auth_router
 from routes.user_card_routes import router as user_card_router
 from routes.item_routes import router as item_router
+from routes.history_routes import router as history_router
 
 app = FastAPI(title="All Scans API")
 
-# ✅ Middleware CORS complet
+# Middleware CORS complet
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -21,13 +22,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Inclusion des routes (ordre important pour éviter conflits)
+# Inclusion des routes (ordre important pour éviter conflits)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(user_router)
 app.include_router(user_card_router)
 app.include_router(card_router)
 app.include_router(item_router)
+app.include_router(history_router)
 
 @app.get("/")
 def home():
-    return {"message": "✅ Backend All Scans opérationnel"}
+    return {"message": "Backend All Scans opérationnel"}

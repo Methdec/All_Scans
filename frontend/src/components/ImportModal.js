@@ -22,7 +22,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
   const handleStartImport = async () => {
     if (!file) return;
 
-    // 1. Pré-calcul
+    // 1. Pre-calcul
     const text = await file.text();
     const lines = text.split("\n").filter((l) => l.trim() !== "");
     setTotalCards(lines.length);
@@ -40,7 +40,6 @@ export default function ImportModal({ onClose, onImportComplete }) {
     });
 
     try {
-        console.log("📤 Envoi de l'import au backend...");
         const res = await fetch("http://localhost:8000/usercards/import", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -61,7 +60,6 @@ export default function ImportModal({ onClose, onImportComplete }) {
                 
                 if (progRes.ok) {
                     const data = await progRes.json();
-                    console.log("📥 Progress:", data); // DEBUG
 
                     if (data.status === "starting" || data.status === "processing") {
                         setProcessedCount(data.processed);
@@ -86,9 +84,9 @@ export default function ImportModal({ onClose, onImportComplete }) {
             } catch (err) {
                 console.error("Erreur polling", err);
                 errorsCount++;
-                if (errorsCount > 10) clearInterval(interval); // Arrêt sécurité
+                if (errorsCount > 10) clearInterval(interval);
             }
-        }, 500); // Polling toutes les 500ms
+        }, 500); 
 
     } catch (err) {
         setLog({ success: false, message: err.message });
@@ -110,7 +108,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
                 <>
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                         <label style={{ fontWeight: "bold", color: "var(--text-main)" }}>Choisir un fichier (.txt)</label>
-                        <input type="file" accept=".txt" onChange={handleFileChange} style={{ padding: "10px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: "var(--radius)", color: "var(--text-main)" }} />
+                        <input type="file" accept=".txt" onChange={handleFileChange} style={{ padding: "10px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: "var(--radius, 4px)", color: "var(--text-main)" }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                         <button onClick={onClose} className="btn-secondary">Annuler</button>
@@ -122,7 +120,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
             {step === "importing" && (
                 <div style={{ textAlign: "center" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.9rem", color: "var(--text-main)" }}>
-                        <span>Total à importer : <strong>{totalCards}</strong></span>
+                        <span>Total a importer : <strong>{totalCards}</strong></span>
                         <span style={{ color: "var(--primary)", fontWeight: "bold" }}>{progressPercent}%</span>
                     </div>
                     <div style={{ width: "100%", height: "12px", background: "var(--bg-input)", borderRadius: "6px", overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -136,16 +134,8 @@ export default function ImportModal({ onClose, onImportComplete }) {
                 <div>
                     {log.success ? (
                         <div style={{ textAlign: "center" }}>
-                            <h3 style={{ color: "var(--success)", marginTop: 0 }}>Terminé !</h3>
-                            <p><strong>{log.imported}</strong> cartes ajoutées.</p>
-                            {log.notFound && log.notFound.length > 0 && (
-                                <div style={{ marginTop: "15px", textAlign: "left", background: "rgba(255,0,0,0.1)", padding: "10px", borderRadius: "var(--radius)" }}>
-                                    <p style={{ color: "var(--danger)", fontWeight: "bold" }}>Non trouvées :</p>
-                                    <ul style={{ maxHeight: "100px", overflowY: "auto", fontSize: "0.85rem", color: "var(--text-main)" }}>
-                                        {log.notFound.map((name, i) => <li key={i}>{name}</li>)}
-                                    </ul>
-                                </div>
-                            )}
+                            <h3 style={{ color: "var(--success)", marginTop: 0 }}>Termine !</h3>
+                            <p><strong>{log.imported}</strong> cartes ajoutees.</p>
                         </div>
                     ) : (
                         <div style={{ textAlign: "center", color: "var(--danger)" }}>

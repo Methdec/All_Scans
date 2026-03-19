@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import CardModal from "./CardModal"; 
 import ImportModal from "./ImportModal"; 
+import CollectionManager from "./CollectionManager";
 import "../theme.css";
 
 const MANA_SYMBOLS = {
@@ -24,6 +25,8 @@ const FORMATS = [
 ];
 
 export default function CardsList() {
+  const [activeTab, setActiveTab] = useState("collection"); 
+  
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -32,10 +35,10 @@ export default function CardsList() {
   const abortControllerRef = useRef(null);
   const observer = useRef();
 
-  const [selectedCardId, setSelectedCardId] = useState(null);
+  // CORRECTION : On stocke l'objet complet (id + foil) au lieu d'un simple string
+  const [selectedCard, setSelectedCard] = useState(null); 
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // --- FILTRES ---
   const [searchTerm, setSearchTerm] = useState("");
   const [oracleText, setOracleText] = useState(""); 
   const [rarityFilter, setRarityFilter] = useState("");
@@ -52,69 +55,22 @@ export default function CardsList() {
   const [formatFilter, setFormatFilter] = useState("");
   const [legalityStatus, setLegalityStatus] = useState("true"); 
 
-  // --- STYLES CSS INJECTÉS ---
   const customStyles = `
-    /* STYLE DES SELECTS (Boutons déroulants) */
     .custom-select {
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background-color: var(--bg-input, #2a2a2a);
-      color: var(--text-main, #fff);
-      border: 1px solid var(--border, #444);
-      padding: 8px 30px 8px 10px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      width: 100%;
-      cursor: pointer;
-      box-sizing: border-box;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none; background-color: var(--bg-input, #2a2a2a);
+      color: var(--text-main, #fff); border: 1px solid var(--border, #444); padding: 8px 30px 8px 10px; border-radius: 4px;
+      font-size: 0.9rem; width: 100%; cursor: pointer; box-sizing: border-box;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 8px center;
-      background-size: 20px;
-      transition: all 0.2s ease;
+      background-repeat: no-repeat; background-position: right 8px center; background-size: 20px; transition: all 0.2s ease;
     }
-
-    /* HOVER SELECT : Bordure et Flèche Orange */
-    .custom-select:hover {
-      border-color: #FF9800;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF9800'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-    }
-
-    /* STYLE DES INPUTS CLASSIQUES */
-    .custom-input {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 4px;
-      border: 1px solid var(--border, #444);
-      background-color: var(--bg-input, #2a2a2a);
-      color: var(--text-main, #fff);
-      font-size: 0.9rem;
-      box-sizing: border-box;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    
-    /* HOVER/FOCUS INPUT : Bordure Orange */
-    .custom-input:hover, .custom-input:focus {
-      border-color: #FF9800;
-    }
-
-    /* Selects préfixes (Force/Endu) */
-    .select-prefix {
-      border-radius: 4px 0 0 4px;
-      border-right: none;
-      width: 45px;
-      padding: 8px 2px;
-      text-align: center;
-      background-position: right 0px center;
-      background-size: 16px;
-      padding-right: 12px;
-    }
-    
-    .input-suffix {
-      border-radius: 0 4px 4px 0;
-    }
+    .custom-select:hover { border-color: #FF9800; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF9800'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e"); }
+    .custom-input { width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border, #444); background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); font-size: 0.9rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+    .custom-input:hover, .custom-input:focus { border-color: #FF9800; }
+    .select-prefix { border-radius: 4px 0 0 4px; border-right: none; width: 45px; padding: 8px 2px; text-align: center; background-position: right 0px center; background-size: 16px; padding-right: 12px; }
+    .input-suffix { border-radius: 0 4px 4px 0; }
+    .tab-button { background: transparent; border: none; color: var(--text-main); font-weight: bold; font-size: 1.1rem; cursor: pointer; padding: 10px 20px; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab-button.active { color: var(--primary, #FF9800); border-bottom: 3px solid var(--primary, #FF9800); }
+    .tab-button:hover:not(.active) { color: var(--primary, #FF9800); opacity: 0.8; }
   `;
 
   const fieldContainerStyle = { marginBottom: "15px" };
@@ -129,7 +85,6 @@ export default function CardsList() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
-  // ✅ FETCH
   const fetchCards = async (pageNumber, isNewFilter = false) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
@@ -199,18 +154,19 @@ export default function CardsList() {
   };
 
   useEffect(() => {
+    if (activeTab !== "collection") return;
     setCards([]); 
     setPage(1);
     setHasMore(true);
     const delayDebounceFn = setTimeout(() => { fetchCards(1, true); }, 300);
     return () => clearTimeout(delayDebounceFn);
     // eslint-disable-next-line
-  }, [searchTerm, oracleText, rarityFilter, colorFilter, colorMode, typeFilters, keywordsFilter, cmcFilter, powerFilter, powerOp, toughnessFilter, toughnessOp, formatFilter, legalityStatus]);
+  }, [searchTerm, oracleText, rarityFilter, colorFilter, colorMode, typeFilters, keywordsFilter, cmcFilter, powerFilter, powerOp, toughnessFilter, toughnessOp, formatFilter, legalityStatus, activeTab]);
 
   useEffect(() => {
-    if (page > 1) fetchCards(page, false);
+    if (page > 1 && activeTab === "collection") fetchCards(page, false);
     // eslint-disable-next-line
-  }, [page]);
+  }, [page, activeTab]);
 
   const toggleColor = (colorCode) => {
     let currentColors = colorFilter ? colorFilter.split(",") : [];
@@ -254,209 +210,233 @@ export default function CardsList() {
     );
   };
 
+  // CORRECTION : Le calcul de l'index de la liste prend desormais en compte l'ID et le fait qu'elle soit foil ou non
+  const selectedIndex = cards.findIndex(c => 
+      (c.id || c._id) === (selectedCard?.id || selectedCard?._id) && 
+      c.is_foil === selectedCard?.is_foil
+  );
+  
+  const hasPrevCard = selectedIndex > 0;
+  const hasNextCard = selectedIndex !== -1 && selectedIndex < cards.length - 1;
+
+  const handlePrevCard = () => {
+    if (hasPrevCard) {
+        const prevCard = cards[selectedIndex - 1];
+        setSelectedCard({ id: prevCard.id || prevCard._id, is_foil: prevCard.is_foil });
+    }
+  };
+
+  const handleNextCard = () => {
+    if (hasNextCard) {
+        const nextCard = cards[selectedIndex + 1];
+        setSelectedCard({ id: nextCard.id || nextCard._id, is_foil: nextCard.is_foil });
+    }
+  };
+
   return (
-    // AJUSTEMENT HAUTEUR MAXIMALE : On utilise flex-grow pour prendre tout l'espace du parent
-    <div className="split-layout" style={{ height: "calc(100vh - 60px)", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
       <style>{customStyles}</style>
-      
-      <div className="sidebar-filters" style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", borderRight: "1px solid var(--border)" }}>
-        
-        {/* --- ZONE SCROLLABLE (Filtres) --- */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "20px" }}>
-            <div className="sidebar-title" style={{ marginBottom: "20px" }}>Ma Collection</div>
 
-            {/* 1. NOM */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Nom</label>
-                <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="custom-input" />
-            </div>
-
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Texte</label>
-                <input type="text" placeholder="Ex: draw a card" value={oracleText} onChange={(e) => setOracleText(e.target.value)} className="custom-input" />
-            </div>
-
-            {/* 2. COULEUR + SELECTEUR MODE */}
-            <div style={fieldContainerStyle}>
-                <div style={{display: "flex", alignItems: "center", marginBottom: "5px", justifyContent: "space-between"}}>
-                    <label style={{...labelStyle, marginBottom: 0}}>Couleurs</label>
-                    <select 
-                        value={colorMode} 
-                        onChange={(e) => setColorMode(e.target.value)} 
-                        className="custom-select"
-                        style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}
-                        title="Exacte = Strictement ces couleurs. Approx = Inclus dans ces couleurs."
-                    >
-                        <option value="exact">Exacte</option>
-                        <option value="subset">Approx.</option>
-                    </select>
-                </div>
-                
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", background: "var(--bg-input, rgba(0,0,0,0.2))", padding: "10px", borderRadius: "4px" }}>
-                    {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
-                </div>
-            </div>
-
-            {/* 3. TYPE */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Type(s)</label>
-                <input 
-                    type="text" 
-                    placeholder="Ex: Creature (Entrée)" 
-                    value={tempTypeInput} 
-                    onChange={(e) => setTempTypeInput(e.target.value)}
-                    onKeyDown={handleTypeKeyDown}
-                    className="custom-input"
-                />
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
-                    {typeFilters.map((filter, index) => (
-                        <div key={index} style={{
-                            display: "flex", alignItems: "center", fontSize: "0.75rem",
-                            background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
-                            border: `1px solid ${filter.mode === "include" ? "var(--success, #4CAF50)" : "var(--danger, #F44336)"}`,
-                            borderRadius: "4px", padding: "2px 6px", color: "var(--text-main)", maxWidth: "100%", overflow: "hidden"
-                        }}>
-                            <span style={{ marginRight: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{filter.text}</span>
-                            
-                            {/* --- BOUTON EST/NON --- */}
-                            <button 
-                                onClick={() => toggleTypeMode(index)} 
-                                style={{ 
-                                    background: "transparent", 
-                                    border: "none", 
-                                    cursor: "pointer", 
-                                    color: filter.mode === "include" ? "#4CAF50" : "#F44336", 
-                                    marginRight: "5px", 
-                                    fontWeight: "bold", 
-                                    fontSize: "0.75rem" 
-                                }}
-                                title="Basculer entre Inclus (EST) et Exclus (NON)"
-                            >
-                                {filter.mode === "include" ? "EST" : "NON"}
-                            </button>
-                            
-                            <button onClick={() => removeTypeFilter(index)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)", fontWeight: "bold" }}>✕</button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 4. RARETÉ */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Rareté</label>
-                <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="custom-select">
-                    <option value="">Toutes</option>
-                    <option value="common">Commune</option>
-                    <option value="uncommon">Unco</option>
-                    <option value="rare">Rare</option>
-                    <option value="mythic">Mythique</option>
-                </select>
-            </div>
-
-            {/* 5. MOTS CLÉS */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Mot(s) clé(s)</label>
-                <input type="text" placeholder="Ex: Flying, Haste..." value={keywordsFilter} onChange={(e) => setKeywordsFilter(e.target.value)} className="custom-input" />
-            </div>
-
-            {/* 6. CMC */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Coût Mana (CMC)</label>
-                <input type="number" min="0" placeholder="Ex: 3" value={cmcFilter} onChange={(e) => setCmcFilter(e.target.value)} className="custom-input" />
-            </div>
-
-            {/* 7. LÉGALITÉ */}
-            <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Légalité</label>
-                <div style={{display: "flex", gap: "8px"}}>
-                    <div style={{flex: 2}}>
-                        <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)} className="custom-select">
-                            {FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                    </div>
-                    <div style={{flex: 1.2}}>
-                        <select value={legalityStatus} onChange={(e) => setLegalityStatus(e.target.value)} className="custom-select">
-                            <option value="true">Légal</option>
-                            <option value="false">Ban</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-             {/* 8. FORCE / ENDURANCE */}
-            <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-                <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Force</label>
-                    <div style={{display: "flex"}}>
-                        <select value={powerOp} onChange={(e) => setPowerOp(e.target.value)} className="custom-select select-prefix">
-                            <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
-                        </select>
-                        <input type="text" value={powerFilter} onChange={(e) => setPowerFilter(e.target.value)} className="custom-input input-suffix" />
-                    </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Endu.</label>
-                    <div style={{display: "flex"}}>
-                        <select value={toughnessOp} onChange={(e) => setToughnessOp(e.target.value)} className="custom-select select-prefix">
-                            <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
-                        </select>
-                        <input type="text" value={toughnessFilter} onChange={(e) => setToughnessFilter(e.target.value)} className="custom-input input-suffix" />
-                    </div>
-                </div>
-            </div>
-            
-            {/* ESPACE POUR SCROLL EN BAS */}
-            <div style={{ height: "20px" }}></div>
-        </div>
-
-        {/* --- ZONE FIXE EN BAS (SANS BANDEAU) --- */}
-        <div style={{ marginTop: "auto", padding: "10px 15px 15px 15px", flexShrink: 0, backgroundColor: "var(--bg-sidebar, inherit)" }}>
-           <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "10px", textAlign: "center" }}>Cartes : <strong style={{ color: "var(--text-main)" }}>{cards.length}</strong></p>
-           
-           <button 
-                className="btn-dashed"
-                onClick={() => setIsImportOpen(true)}
-                style={{ 
-                    width: "100%", 
-                    padding: "12px", 
-                    background: "transparent", 
-                    border: "2px dashed #FF9800",
-                    color: "#FF9800",
-                    borderRadius: "8px", 
-                    cursor: "pointer", 
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    transition: "all 0.2s"
-                }}
-            >
-                Importer
-            </button>
-        </div>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--bg-main)" }}>
+        <button className={`tab-button ${activeTab === "collection" ? "active" : ""}`} onClick={() => setActiveTab("collection")}>Ma Collection</button>
+        <button className={`tab-button ${activeTab === "sync" ? "active" : ""}`} onClick={() => setActiveTab("sync")}>Import / Export</button>
       </div>
 
-      <div className="results-area">
-        <div className="collection-grid">
-            {cards.map((card, index) => (
-                <div ref={cards.length === index + 1 ? lastCardElementRef : null} key={card._id || card.id} className="item-card" onClick={() => setSelectedCardId(card.id || card._id)} style={{ cursor: "pointer" }}>
-                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        {card.image_normal ? <img src={card.image_normal} alt={card.name} className="full-card-image" loading="lazy" /> : <div className="full-card-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222', color: '#666' }}>No Image</div>}
-                        <div className="card-info">
-                            <div style={{ fontWeight: "bold", fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
-                                <span style={{ color: "var(--text-muted)" }}>{card.set_name || "?"}</span>
-                                <span style={{ color: "var(--primary)", fontWeight: "bold" }}>x{card.count || 1}</span>
+      {activeTab === "collection" ? (
+        <div className="split-layout" style={{ flex: 1, overflow: "hidden" }}>
+          
+          <div className="sidebar-filters" style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", borderRight: "1px solid var(--border)" }}>
+            
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "20px" }}>
+                <div className="sidebar-title" style={{ marginBottom: "20px" }}>Filtres de Collection</div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Nom</label>
+                    <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="custom-input" />
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <div style={{display: "flex", alignItems: "center", marginBottom: "5px", justifyContent: "space-between"}}>
+                        <label style={{...labelStyle, marginBottom: 0}}>Couleurs</label>
+                        <select 
+                            value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="custom-select"
+                            style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}
+                            title="Exacte = Strictement ces couleurs. Approx = Inclus dans ces couleurs."
+                        >
+                            <option value="exact">Exacte</option>
+                            <option value="subset">Approx.</option>
+                        </select>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", background: "var(--bg-input, rgba(0,0,0,0.2))", padding: "10px", borderRadius: "4px" }}>
+                        {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
+                    </div>
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Type(s)</label>
+                    <input type="text" placeholder="Ex: Creature (Entrée)" value={tempTypeInput} onChange={(e) => setTempTypeInput(e.target.value)} onKeyDown={handleTypeKeyDown} className="custom-input" />
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
+                        {typeFilters.map((filter, index) => (
+                            <div key={index} style={{
+                                display: "flex", alignItems: "center", fontSize: "0.75rem",
+                                background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
+                                border: `1px solid ${filter.mode === "include" ? "var(--success, #4CAF50)" : "var(--danger, #F44336)"}`,
+                                borderRadius: "4px", padding: "2px 6px", color: "var(--text-main)", maxWidth: "100%", overflow: "hidden"
+                            }}>
+                                <span style={{ marginRight: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{filter.text}</span>
+                                <button 
+                                    onClick={() => toggleTypeMode(index)} 
+                                    style={{ background: "transparent", border: "none", cursor: "pointer", color: filter.mode === "include" ? "#4CAF50" : "#F44336", marginRight: "5px", fontWeight: "bold", fontSize: "0.75rem" }}
+                                    title="Basculer entre Inclus (EST) et Exclus (NON)"
+                                >
+                                    {filter.mode === "include" ? "EST" : "NON"}
+                                </button>
+                                <button onClick={() => removeTypeFilter(index)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)", fontWeight: "bold" }}>✕</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Texte</label>
+                    <input type="text" placeholder="Ex: draw a card" value={oracleText} onChange={(e) => setOracleText(e.target.value)} className="custom-input" />
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Rareté</label>
+                    <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="custom-select">
+                        <option value="">Toutes</option>
+                        <option value="common">Commune</option>
+                        <option value="uncommon">Unco</option>
+                        <option value="rare">Rare</option>
+                        <option value="mythic">Mythique</option>
+                    </select>
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Mot(s) clé(s)</label>
+                    <input type="text" placeholder="Ex: Flying, Haste..." value={keywordsFilter} onChange={(e) => setKeywordsFilter(e.target.value)} className="custom-input" />
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Coût Mana (CMC)</label>
+                    <input type="number" min="0" placeholder="Ex: 3" value={cmcFilter} onChange={(e) => setCmcFilter(e.target.value)} className="custom-input" />
+                </div>
+
+                <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Légalité</label>
+                    <div style={{display: "flex", gap: "8px"}}>
+                        <div style={{flex: 2}}>
+                            <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)} className="custom-select">
+                                {FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                            </select>
+                        </div>
+                        <div style={{flex: 1.2}}>
+                            <select value={legalityStatus} onChange={(e) => setLegalityStatus(e.target.value)} className="custom-select">
+                                <option value="true">Légal</option>
+                                <option value="false">Ban</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={labelStyle}>Force</label>
+                        <div style={{display: "flex"}}>
+                            <select value={powerOp} onChange={(e) => setPowerOp(e.target.value)} className="custom-select select-prefix">
+                                <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
+                            </select>
+                            <input type="text" value={powerFilter} onChange={(e) => setPowerFilter(e.target.value)} className="custom-input input-suffix" />
+                        </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={labelStyle}>Endu.</label>
+                        <div style={{display: "flex"}}>
+                            <select value={toughnessOp} onChange={(e) => setToughnessOp(e.target.value)} className="custom-select select-prefix">
+                                <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
+                            </select>
+                            <input type="text" value={toughnessFilter} onChange={(e) => setToughnessFilter(e.target.value)} className="custom-input input-suffix" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div style={{ height: "20px" }}></div>
+            </div>
+
+            <div style={{ marginTop: "auto", padding: "10px 15px 15px 15px", flexShrink: 0, backgroundColor: "var(--bg-sidebar, inherit)", borderTop: "1px solid var(--border)" }}>
+               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0", textAlign: "center" }}>Cartes : <strong style={{ color: "var(--text-main)" }}>{cards.length}</strong></p>
+            </div>
+          </div>
+
+          <div className="results-area" style={{ overflowY: "auto", position: "relative" }}>
+            <div className="collection-grid" style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                {cards.map((card, index) => (
+                    <div 
+                      ref={cards.length === index + 1 ? lastCardElementRef : null} 
+                      key={card._id || `${card.id}_${card.is_foil}`} // CORRECTION : Cle React unique !
+                      className="item-card" 
+                      onClick={() => setSelectedCard({ id: card.id || card._id, is_foil: card.is_foil })} 
+                      style={{ 
+                        backgroundColor: "var(--bg-input, #1e1e1e)", borderRadius: "10px", padding: "12px", 
+                        cursor: "pointer", display: "flex", flexDirection: "column", border: "2px solid transparent", 
+                        transition: "border-color 0.2s, transform 0.2s", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" 
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary, #FF9800)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
+                    >
+                       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            <div style={{ position: "relative", width: "100%", marginBottom: "12px" }}>
+                              {card.image_normal ? (
+                                <img src={card.image_normal} alt={card.name} style={{ width: "100%", height: "auto", borderRadius: "4.75% / 3.5%", display: "block" }} loading="lazy" />
+                              ) : (
+                                <div style={{ width: "100%", aspectRatio: "2.5/3.5", backgroundColor: "#333", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>Pas d'image</div>
+                              )}
+                            </div>
+                            
+                            <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-end" }}>
+                                <div style={{ fontWeight: "bold", color: "var(--text-main, #fff)", fontSize: "0.95rem", textAlign: "center", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={card.name}>
+                                  {card.name}
+                                  {card.is_foil && (
+                                     <span style={{ marginLeft: "6px", background: "linear-gradient(45deg, #FFD700, #FF9800)", color: "#121212", fontSize: "0.65rem", fontWeight: "bold", padding: "2px 4px", borderRadius: "4px", verticalAlign: "middle" }}>
+                                         F
+                                     </span>
+                                  )}
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ color: "var(--text-muted, #aaa)", fontSize: "0.8rem", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }} title={card.set_name}>
+                                      {card.set_name || "?"}
+                                    </span>
+                                    <span style={{ color: "var(--primary)", fontWeight: "bold", fontSize: "0.9rem" }}>x{card.count || 1}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ))}
-        </div>
-        {loading && <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>Chargement...</div>}
-        {!loading && cards.length === 0 && <div style={{ textAlign: "center", marginTop: 50, color: "var(--text-muted)" }}>Aucune carte trouvée.</div>}
-      </div>
+                ))}
+            </div>
+            {loading && <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>Chargement...</div>}
+            {!loading && cards.length === 0 && <div style={{ textAlign: "center", marginTop: 50, color: "var(--text-muted)" }}>Aucune carte trouvée.</div>}
+          </div>
 
-      {selectedCardId && <CardModal cardId={selectedCardId} onClose={() => setSelectedCardId(null)} />}
-      {isImportOpen && <ImportModal onClose={() => setIsImportOpen(false)} onImportComplete={() => { setIsImportOpen(false); setPage(1); fetchCards(1, true); }} />}
+          {/* CORRECTION : On envoie l'état isFoil au modal, et on lui donne la vraie quantité affichee dans la liste ! */}
+          {selectedCard && (
+            <CardModal 
+              cardId={selectedCard.id} 
+              isFoil={selectedCard.is_foil}
+              defaultCount={cards[selectedIndex]?.count || 1}
+              onClose={() => setSelectedCard(null)} 
+              onNext={handleNextCard}
+              onPrev={handlePrevCard}
+              hasNext={hasNextCard}
+              hasPrev={hasPrevCard}
+            />
+          )}
+          {isImportOpen && <ImportModal onClose={() => setIsImportOpen(false)} onImportComplete={() => { setIsImportOpen(false); setPage(1); fetchCards(1, true); }} />}
+        </div>
+      ) : (
+        <CollectionManager />
+      )}
     </div>
   );
 }
