@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import users_collection
 
-# Le TestClient agit comme un navigateur : il garde les cookies en mémoire entre les requêtes
-client = TestClient(app)
+client = TestClient(app, base_url="https://testserver")
 
 def test_register_and_login_flow():
     """
