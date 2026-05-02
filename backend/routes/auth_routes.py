@@ -1,26 +1,29 @@
-from fastapi import APIRouter, HTTPException, Response, Request, Body, Depends
-from bson import ObjectId
 import secrets
 import httpx
+import pyotp
+import urllib.parse
+from fastapi import APIRouter, HTTPException, Response, Request, Body, Depends
+from bson import ObjectId
 from datetime import datetime
-from utils.passwords import hash_password, verify_password
-from database import users_collection, user_cards_collection, cards_collection, items_collection, history_collection
+from utils.passwords import hash_password, verify_password, validate_password_strength
+from database import users_collection, user_cards_collection, cards_collection, items_collection, history_collection, tag_rules_collection
 from models.card import extract_card_fields
+from utils.tags_engine import get_automated_tags
 
 router = APIRouter()
 
-sessions = {}
+mfa_pending_sessions = {}
 
 async def get_current_user(request: Request):
     token = request.cookies.get("session_token")
     if not token:
         raise HTTPException(status_code=401, detail="Non connecte")
 
-    user_id = sessions.get(token)
-    if not user_id:
+    user = users_collection.find_one({"session_token": token})
+    if not user:
         raise HTTPException(status_code=401, detail="Session expiree ou invalide")
 
-    return user_id
+    return str(user["_id"])
 
 @router.post("/register")
 def register_user(data: dict = Body(...)):
@@ -38,13 +41,19 @@ def register_user(data: dict = Body(...)):
     if users_collection.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="Cette adresse email est deja enregistree")
 
+    pwd_check = validate_password_strength(password)
+    if not pwd_check["valid"]:
+        raise HTTPException(status_code=400, detail=pwd_check["message"])
+
     hashed_password = hash_password(password)
 
     result = users_collection.insert_one({
         "nom": nom.strip(),
         "email": email,
         "password": hashed_password,
-        "avatar": None 
+        "avatar": None,
+        "mfa_enabled": False, 
+        "mfa_secret": None    
     })
 
     return {"message": "Utilisateur cree avec succes", "id": str(result.inserted_id)}
@@ -53,51 +62,160 @@ def register_user(data: dict = Body(...)):
 def login_user(response: Response, data: dict = Body(...)):
     email = data.get("email")
     password = data.get("password")
+    
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email et mot de passe sont requis")
+    
     email = email.strip().lower()
-
     user = users_collection.find_one({"email": email})
+    
     if not user or not verify_password(password, user["password"]):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
+    if user.get("mfa_enabled", False):
+        temp_token = secrets.token_hex(16)
+        mfa_pending_sessions[temp_token] = str(user["_id"])
+        
+        return {
+            "message": "Authentification multifacteur requise", 
+            "requires_mfa": True,
+            "mfa_token": temp_token 
+        }
+
     token = secrets.token_hex(16)
-    sessions[token] = str(user["_id"]) 
+    
+    users_collection.update_one({"_id": user["_id"]}, {"$set": {"session_token": token}})
 
     response.set_cookie(
         key="session_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False, 
+        samesite="none",
+        secure=True, 
+    )
+
+    return {"message": "Connexion reussie", "requires_mfa": False, "user": {"id": str(user["_id"]), "nom": user["nom"], "avatar": user.get("avatar")}}
+
+@router.post("/login/mfa")
+def login_mfa_verify(response: Response, data: dict = Body(...)):
+    mfa_token = data.get("mfa_token")
+    mfa_code = data.get("mfa_code")
+
+    if not mfa_token or not mfa_code:
+        raise HTTPException(status_code=400, detail="Jeton et code requis")
+
+    user_id = mfa_pending_sessions.get(mfa_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Session temporaire invalide ou expiree")
+
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user or not user.get("mfa_enabled") or not user.get("mfa_secret"):
+         raise HTTPException(status_code=400, detail="MFA non configure pour cet utilisateur")
+
+    totp = pyotp.TOTP(user["mfa_secret"])
+    if not totp.verify(mfa_code):
+         raise HTTPException(status_code=401, detail="Code MFA incorrect")
+
+    del mfa_pending_sessions[mfa_token]
+    
+    token = secrets.token_hex(16)
+    
+    users_collection.update_one({"_id": user["_id"]}, {"$set": {"session_token": token}})
+
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        samesite="none",
+        secure=True, 
     )
 
     return {"message": "Connexion reussie", "user": {"id": str(user["_id"]), "nom": user["nom"], "avatar": user.get("avatar")}}
 
+@router.get("/me/mfa/setup")
+def setup_mfa(user_id: str = Depends(get_current_user)):
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    secret = pyotp.random_base32()
+    users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"temp_mfa_secret": secret}})
+    
+    app_name = "HexaDeck"
+    user_email = user["email"]
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user_email, issuer_name=app_name)
+    
+    return {"secret": secret, "uri": uri}
+
+@router.post("/me/mfa/enable")
+def enable_mfa(data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    mfa_code = data.get("mfa_code")
+    if not mfa_code:
+        raise HTTPException(status_code=400, detail="Code requis")
+
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    temp_secret = user.get("temp_mfa_secret")
+    
+    if not temp_secret:
+        raise HTTPException(status_code=400, detail="Veuillez d'abord initier la configuration MFA")
+
+    totp = pyotp.TOTP(temp_secret)
+    if not totp.verify(mfa_code):
+        raise HTTPException(status_code=400, detail="Code incorrect. Assurez-vous d'avoir bien scanne le QR Code.")
+
+    users_collection.update_one(
+        {"_id": ObjectId(user_id)}, 
+        {
+            "$set": {"mfa_enabled": True, "mfa_secret": temp_secret},
+            "$unset": {"temp_mfa_secret": ""} 
+        }
+    )
+    
+    return {"message": "Authentification multifacteur activee avec succes !"}
+
+@router.post("/me/mfa/disable")
+def disable_mfa(data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    password = data.get("password")
+    if not password:
+         raise HTTPException(status_code=400, detail="Mot de passe requis pour desactiver le MFA")
+         
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    if not verify_password(password, user["password"]):
+         raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+         
+    users_collection.update_one(
+        {"_id": ObjectId(user_id)}, 
+        {
+            "$set": {"mfa_enabled": False},
+            "$unset": {"mfa_secret": "", "temp_mfa_secret": ""}
+        }
+    )
+    
+    return {"message": "Authentification multifacteur desactivee."}
+
 @router.post("/logout")
 def logout_user(request: Request, response: Response):
     token = request.cookies.get("session_token")
-    if token and token in sessions:
-        del sessions[token]
+    if token:
+        users_collection.update_many({"session_token": token}, {"$unset": {"session_token": ""}})
+        
     response.delete_cookie("session_token")
     return {"message": "Deconnexion reussie"}
 
 @router.get("/me")
 def get_me(request: Request):
     token = request.cookies.get("session_token")
-    user_id = sessions.get(token)
-    if not user_id:
+    if not token:
         raise HTTPException(status_code=401, detail="Non connecte")
 
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    user = users_collection.find_one({"session_token": token})
     if not user:
-        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+        raise HTTPException(status_code=401, detail="Utilisateur introuvable ou session expiree")
 
     return {
         "id": str(user["_id"]), 
         "nom": user["nom"], 
         "email": user["email"],
-        "avatar": user.get("avatar") 
+        "avatar": user.get("avatar"),
+        "mfa_enabled": user.get("mfa_enabled", False)
     }
 
 @router.get("/proxy-image")
@@ -160,6 +278,10 @@ async def update_password(data: dict = Body(...), user_id: str = Depends(get_cur
     if not verify_password(old_password, user["password"]):
         raise HTTPException(status_code=401, detail="Ancien mot de passe incorrect")
 
+    pwd_check = validate_password_strength(new_password)
+    if not pwd_check["valid"]:
+        raise HTTPException(status_code=400, detail=pwd_check["message"])
+
     hashed_pw = hash_password(new_password)
     users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"password": hashed_pw}})
     return {"message": "Mot de passe mis a jour"}
@@ -172,35 +294,6 @@ async def get_my_collection_ids(user_id: str = Depends(get_current_user)):
         
     unique_card_ids = list(set([str(c["card_id"]) for c in user_cards if "card_id" in c]))
     return {"ids": unique_card_ids}
-
-@router.post("/me/collection/update/chunk")
-async def update_my_collection_chunk(data: dict = Body(...), user_id: str = Depends(get_current_user)):
-    chunk = data.get("ids", [])
-    if not chunk:
-        return {"updated": 0}
-        
-    identifiers = [{"id": cid} for cid in chunk]
-    updated_count = 0
-    
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            resp = await client.post("https://api.scryfall.com/cards/collection", json={"identifiers": identifiers})
-            if resp.status_code == 200:
-                scryfall_data = resp.json().get("data", [])
-                for scryfall_card in scryfall_data:
-                    cleaned = extract_card_fields(scryfall_card)
-                    card_id = cleaned["id"]
-                    
-                    cards_collection.update_one(
-                        {"id": card_id},
-                        {"$set": cleaned}
-                    )
-                    updated_count += 1
-        except Exception as e:
-            print(f"Erreur API Scryfall chunk: {e}")
-            raise HTTPException(status_code=500, detail="Erreur API Scryfall")
-            
-    return {"updated": updated_count}
 
 @router.post("/me/collection/update/log")
 async def log_collection_update(data: dict = Body(...), user_id: str = Depends(get_current_user)):
@@ -227,9 +320,65 @@ async def delete_account(request: Request, response: Response, user_id: str = De
     history_collection.delete_many({"user_id": user_id})
     users_collection.delete_one({"_id": ObjectId(user_id)})
 
-    token = request.cookies.get("session_token")
-    if token and token in sessions:
-        del sessions[token]
     response.delete_cookie("session_token")
 
     return {"message": "Compte et donnees supprimes avec succes."}
+
+
+@router.post("/me/collection/update/chunk")
+async def update_my_collection_chunk(data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    chunk = data.get("ids", [])
+    if not chunk:
+        return {"updated": 0}
+        
+    identifiers = [{"id": cid} for cid in chunk]
+    updated_count = 0
+    
+    # 1. Récupération des règles
+    user_rules = list(tag_rules_collection.find({"user_id": user_id}))
+    automated_tag_names = [rule.get("tag_name").strip().lower() for rule in user_rules]
+    
+    print(f"DEBUG: Synchronisation de {len(chunk)} cartes. Règles actives : {len(user_rules)}")
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            resp = await client.post("https://api.scryfall.com/cards/collection", json={"identifiers": identifiers})
+            if resp.status_code == 200:
+                scryfall_data = resp.json().get("data", [])
+                for scryfall_card in scryfall_data:
+                    cleaned = extract_card_fields(scryfall_card)
+                    card_id = cleaned["id"]
+                    
+                    # Mise à jour globale
+                    cards_collection.update_one({"id": card_id}, {"$set": cleaned})
+                    
+                    # 2. Calcul des tags
+                    current_auto_tags = get_automated_tags(cleaned, user_rules)
+                    
+                    if current_auto_tags:
+                        print(f"[Tags] Sync de {cleaned.get('name')} -> Applique : {current_auto_tags}")
+
+                    # 3. Nettoyage des anciens tags automatiques (pour éviter les doublons ou tags obsolètes)
+                    if automated_tag_names:
+                        user_cards_collection.update_many(
+                            {"user_id": user_id, "card_id": card_id},
+                            {"$pull": {"tags": {"$in": automated_tag_names}}}
+                        )
+
+                    # 4. Application des nouveaux tags
+                    if current_auto_tags:
+                        user_cards_collection.update_many(
+                            {"user_id": user_id, "card_id": card_id},
+                            {"$addToSet": {"tags": {"$each": current_auto_tags}}}
+                        )
+                    
+                    updated_count += 1
+            else:
+                print(f"DEBUG: Erreur Scryfall API: {resp.status_code}")
+        except Exception as e:
+            print(f"Erreur API Scryfall chunk: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail="Erreur API Scryfall")
+            
+    return {"updated": updated_count}

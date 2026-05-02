@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ItemsPage from "./components/ItemsPage";
 import DeckDetails from "./components/DeckDetails"; 
 import ProfilePage from "./components/ProfilePage";
+import DevicePage from "./components/DevicePage";
 
 const DEFAULT_AVATAR = "https://cards.scryfall.io/art_crop/front/0/0/00020b05-ecb9-4603-8cc1-8cfa7a14befc.jpg";
 
@@ -33,7 +34,7 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://localhost:8000/auth/me", {
+        const response = await fetch("http://127.0.0.1:8000/auth/me", {
           credentials: "include",
         });
         if (response.ok) {
@@ -63,7 +64,7 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch("http://localhost:8000/auth/logout", {
+    await fetch("http://127.0.0.1:8000/auth/logout", {
       method: "POST",
       credentials: "include",
     });
@@ -147,6 +148,7 @@ function App() {
             {user && (
               <>
                 <NavLink to="/cards" style={navLinkStyle}>Collection</NavLink>
+                <NavLink to="/device" style={navLinkStyle}>Matériel</NavLink>
                 <NavLink to="/items" style={navLinkStyle} end>Mes Decks</NavLink>
               </>
             )}
@@ -214,6 +216,7 @@ function App() {
             <Route path="/items" element={<ProtectedRoute><ItemsPage /></ProtectedRoute>} />
             <Route path="/deck/:id" element={<ProtectedRoute><DeckDetails /></ProtectedRoute>}/>
             <Route path="/cards" element={<ProtectedRoute><CardsList /></ProtectedRoute>} />
+            <Route path="/device" element={<ProtectedRoute><DevicePage /></ProtectedRoute>} />
             <Route
               path="/profile"
               element={

@@ -1,6 +1,6 @@
 # routes/history_routes.py
 from fastapi import APIRouter, HTTPException, Depends
-from database import history_collection, user_cards_collection
+from database import history_collection, user_cards_collection, cards_collection
 from routes.auth_routes import get_current_user
 from bson import ObjectId
 import logging
@@ -86,3 +86,35 @@ async def revert_history_import(history_id: str, user_id: str = Depends(get_curr
     except Exception as e:
         logger.error(f"Erreur Revert Import: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/history/{log_id}/recap") # <-- AJOUT DU /history ICI
+async def get_history_recap(log_id: str, user_id: str = Depends(get_current_user)):
+    from bson import ObjectId
+    
+    log = history_collection.find_one({"_id": ObjectId(log_id), "user_id": user_id})
+    if not log:
+        raise HTTPException(status_code=404, detail="Historique introuvable")
+
+    cards_in_log = log.get("cards", [])
+    if not cards_in_log:
+        return {"cards": [], "log_details": log.get("details", "")}
+
+    card_ids = [c["id"] for c in cards_in_log if "id" in c]
+    global_cards = list(cards_collection.find({"id": {"$in": card_ids}}))
+    cards_map = {c["id"]: c for c in global_cards}
+
+    enriched_cards = []
+    for c in cards_in_log:
+        details = cards_map.get(c["id"])
+        if details:
+            enriched_cards.append({
+                "id": c["id"],
+                "name": c.get("name", details.get("name")),
+                "quantity": c.get("quantity", 1),
+                "prices": details.get("prices", {}),
+                "type_line": details.get("type_line", ""),
+                "cmc": details.get("cmc", 0),
+                "image": details.get("image_art_crop") or details.get("image_normal")
+            })
+
+    return {"cards": enriched_cards, "log_details": log.get("details", "")}

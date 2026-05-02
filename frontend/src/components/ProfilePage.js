@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Cropper from "react-easy-crop";
+import { QRCodeCanvas } from "qrcode.react";
 import "../theme.css";
 
 const createImage = (url) =>
@@ -51,6 +52,11 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const [deleteCollectionConfirm, setDeleteCollectionConfirm] = useState("");
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
 
+  // Etats pour le MFA
+  const [mfaSetupData, setMfaSetupData] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaDisablePassword, setMfaDisablePassword] = useState("");
+
   useEffect(() => {
       if (user?.nom) setNomData({ nom: user.nom });
   }, [user]);
@@ -74,6 +80,8 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     setCrop({ x: 0, y: 0 });
     setDeleteCollectionConfirm("");
     setDeleteAccountConfirm("");
+    setMfaCode("");
+    setMfaDisablePassword("");
   };
 
   const handleLocalImageUpload = (e) => {
@@ -120,7 +128,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     try {
       const croppedBase64 = await getCroppedImg(imageToCrop, croppedAreaPixels);
       
-      const res = await fetch("http://localhost:8000/auth/me/avatar", {
+      const res = await fetch("http://127.0.0.1:8000/auth/me/avatar", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -129,10 +137,10 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
       
       if (res.ok) {
         setUser(prev => ({ ...prev, avatar: croppedBase64 }));
-        showNotification("Photo de profil mise a jour !");
+        showNotification("Photo de profil mise à jour !");
         closeModal();
       } else {
-          showNotification("Erreur lors de la mise a jour.", "error");
+          showNotification("Erreur lors de la mise à jour.", "error");
       }
     } catch (err) {
       showNotification("Erreur de traitement de l'image", "error");
@@ -144,7 +152,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleUpdateNom = async (e) => {
       e.preventDefault();
       try {
-        const res = await fetch("http://localhost:8000/auth/me/nom", {
+        const res = await fetch("http://127.0.0.1:8000/auth/me/nom", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -152,7 +160,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         });
         if (res.ok) {
           setUser(prev => ({ ...prev, nom: nomData.nom }));
-          showNotification("Pseudo mis a jour !");
+          showNotification("Pseudo mis à jour !");
           closeModal();
         } else {
           const errorData = await res.json();
@@ -166,7 +174,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleUpdateEmail = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:8000/auth/me/email", {
+      const res = await fetch("http://127.0.0.1:8000/auth/me/email", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -174,7 +182,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
       });
       if (res.ok) {
         setUser(prev => ({ ...prev, email: emailData.new_email }));
-        showNotification("Adresse email mise a jour !");
+        showNotification("Adresse email mise à jour !");
         closeModal();
       } else {
         const errorData = await res.json();
@@ -192,12 +200,8 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         return showNotification("Les nouveaux mots de passe ne correspondent pas.", "error");
     }
 
-    if (passwordData.new_password.length < 6) {
-        return showNotification("Le nouveau mot de passe est trop court.", "error");
-    }
-
     try {
-      const res = await fetch("http://localhost:8000/auth/me/password", {
+      const res = await fetch("http://127.0.0.1:8000/auth/me/password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -207,7 +211,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         })
       });
       if (res.ok) {
-        showNotification("Mot de passe mis a jour !");
+        showNotification("Mot de passe mis à jour !");
         closeModal();
       } else {
         const errorData = await res.json();
@@ -226,10 +230,10 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     setTotalCards(0);
     
     try {
-        const resIds = await fetch("http://localhost:8000/auth/me/collection/ids", { credentials: "include" });
+        const resIds = await fetch("http://127.0.0.1:8000/auth/me/collection/ids", { credentials: "include" });
         const dataIds = await resIds.json();
         
-        if (!resIds.ok) throw new Error("Erreur de recuperation des IDs");
+        if (!resIds.ok) throw new Error("Erreur de récupération des IDs");
         
         const ids = dataIds.ids || [];
         if (ids.length === 0) {
@@ -246,7 +250,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         for (let i = 0; i < ids.length; i += chunkSize) {
             const chunk = ids.slice(i, i + chunkSize);
             
-            await fetch("http://localhost:8000/auth/me/collection/update/chunk", {
+            await fetch("http://127.0.0.1:8000/auth/me/collection/update/chunk", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -258,17 +262,16 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
             setUpdateProgress(Math.min(100, Math.round((processed / ids.length) * 100)));
         }
 
-        // Enregistrement dans l'historique cote backend
-        await fetch("http://localhost:8000/auth/me/collection/update/log", {
+        await fetch("http://127.0.0.1:8000/auth/me/collection/update/log", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({ processed: ids.length })
         });
 
-        showNotification("Collection mise a jour avec succes !");
+        showNotification("Collection mise à jour avec succès !");
     } catch (err) {
-        showNotification("Erreur serveur lors de la mise a jour", "error");
+        showNotification("Erreur serveur lors de la mise à jour", "error");
     } finally {
         setTimeout(() => {
             setIsUpdatingCollection(false);
@@ -279,10 +282,10 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleDeleteCollection = async () => {
       if (deleteCollectionConfirm !== "SUPPRIMER") return;
       try {
-          const res = await fetch("http://localhost:8000/auth/me/collection", { method: "DELETE", credentials: "include" });
+          const res = await fetch("http://127.0.0.1:8000/auth/me/collection", { method: "DELETE", credentials: "include" });
           const data = await res.json();
           if (res.ok) {
-              showNotification(data.message || "Collection videe !");
+              showNotification(data.message || "Collection vidée !");
               closeModal();
           } else {
               showNotification(data.detail || "Erreur lors de la suppression", "error");
@@ -293,7 +296,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleDeleteAccount = async () => {
       if (deleteAccountConfirm !== "SUPPRIMER") return;
       try {
-          const res = await fetch("http://localhost:8000/auth/me", { method: "DELETE", credentials: "include" });
+          const res = await fetch("http://127.0.0.1:8000/auth/me", { method: "DELETE", credentials: "include" });
           if (res.ok) {
               localStorage.removeItem("openDecks");
               window.location.href = "/login";
@@ -302,6 +305,62 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
               showNotification(data.detail || "Erreur lors de la suppression du compte", "error");
           }
       } catch (err) { showNotification("Erreur serveur", "error"); }
+  };
+
+  // --- FONCTIONS MFA ---
+  const handleInitiateMfa = async () => {
+      try {
+          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/setup", { credentials: "include" });
+          const data = await res.json();
+          if (res.ok) {
+              setMfaSetupData(data);
+              setActiveModal("setupMfa");
+          } else {
+              showNotification("Impossible d'initialiser l'A2F", "error");
+          }
+      } catch (err) {
+          showNotification("Erreur serveur", "error");
+      }
+  };
+
+  const handleEnableMfa = async (e) => {
+      e.preventDefault();
+      try {
+          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/enable", {
+              method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+              body: JSON.stringify({ mfa_code: mfaCode })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setUser(prev => ({ ...prev, mfa_enabled: true }));
+              showNotification("Authentification à double facteur activée !");
+              closeModal();
+          } else {
+              showNotification(data.detail || "Code incorrect", "error");
+          }
+      } catch (err) {
+          showNotification("Erreur serveur", "error");
+      }
+  };
+
+  const handleDisableMfa = async (e) => {
+      e.preventDefault();
+      try {
+          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/disable", {
+              method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+              body: JSON.stringify({ password: mfaDisablePassword })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setUser(prev => ({ ...prev, mfa_enabled: false }));
+              showNotification("Authentification à double facteur désactivée.");
+              closeModal();
+          } else {
+              showNotification(data.detail || "Mot de passe incorrect", "error");
+          }
+      } catch (err) {
+          showNotification("Erreur serveur", "error");
+      }
   };
 
   const defaultAvatar = "https://cards.scryfall.io/art_crop/front/0/0/00020b05-ecb9-4603-8cc1-8cfa7a14befc.jpg";
@@ -349,9 +408,24 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                 </div>
             </div>
 
-            <button onClick={() => setActiveModal("password")} className="btn-secondary" style={{ width: "100%", padding: "12px", borderStyle: "dashed", borderColor: "var(--text-muted)" }}>
+            <button onClick={() => setActiveModal("password")} className="btn-secondary" style={{ width: "100%", padding: "12px", borderStyle: "dashed", borderColor: "var(--text-muted)", marginBottom: "15px" }}>
                 Changer le mot de passe
             </button>
+
+            {/* BLOC MFA */}
+            <div style={{ padding: "15px", borderRadius: "8px", background: user?.mfa_enabled ? "rgba(76, 175, 80, 0.05)" : "rgba(255, 152, 0, 0.05)", border: `1px solid ${user?.mfa_enabled ? "var(--success)" : "var(--primary)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                    <h4 style={{ margin: "0 0 5px 0", color: "var(--text-main)", fontSize: "1rem" }}>Double Authentification (A2F)</h4>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: user?.mfa_enabled ? "var(--success)" : "var(--text-muted)" }}>
+                        {user?.mfa_enabled ? "L'A2F est activée et sécurise votre compte." : "Protégez votre compte avec un code à 6 chiffres."}
+                    </p>
+                </div>
+                {user?.mfa_enabled ? (
+                    <button onClick={() => setActiveModal("disableMfa")} className="btn-secondary" style={{ borderColor: "var(--danger)", color: "var(--danger)" }}>Désactiver</button>
+                ) : (
+                    <button onClick={handleInitiateMfa} className="btn-primary">Activer</button>
+                )}
+            </div>
         </div>
 
         <div style={sectionStyle}>
@@ -370,7 +444,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                         disabled={isUpdatingCollection} 
                         style={{ width: "100%", padding: "12px", background: "transparent", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer" }}
                     >
-                        <span style={{ color: "var(--text-main)", fontSize: "1rem" }}>Mettre a jour les donnees (Prix, legalites...)</span>
+                        <span style={{ color: "var(--text-main)", fontSize: "1rem" }}>Mettre à jour les données (Prix, légalités...)</span>
                         <span style={{ color: "var(--primary)", fontWeight: "bold" }}>
                             {isUpdatingCollection ? `${updateProgress}%` : "Lancer"}
                         </span>
@@ -386,7 +460,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
         <div style={sectionStyle}>
             <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", textAlign: "left" }}>
-                Preferences d'affichage
+                Préférences d'affichage
             </h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-main)" }}>Apparence de l'application :</span>
@@ -402,52 +476,19 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <button onClick={handleLogout} className="btn-secondary" style={{ width: "100%", padding: "12px", fontWeight: "bold", display: "flex", justifyContent: "center" }}>
-                    Se deconnecter
+                    Se déconnecter
                 </button>
                 <button onClick={() => setActiveModal("deleteAccount")} className="btn-primary" style={{ width: "100%", background: "var(--danger)", color: "white", border: "none", padding: "12px", fontWeight: "bold", display: "flex", justifyContent: "center" }}>
-                    Supprimer mon compte definitivement
+                    Supprimer mon compte définitivement
                 </button>
             </div>
         </div>
 
       </div>
 
-      {activeModal === "updateCollection" && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: "450px", textAlign: "center", boxSizing: "border-box", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: "var(--primary)", marginBottom: "20px" }}>Mise a jour de la collection</h3>
-            
-            <p style={{ fontSize: "0.9rem", color: "var(--text-main)", marginBottom: "25px" }}>
-                Synchronisation des prix et legalites avec Scryfall...
-            </p>
-
-            <div style={{ height: "20px", width: "100%", boxSizing: "border-box", background: "var(--bg-main)", borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
-                <div style={{ height: "100%", width: `${updateProgress}%`, background: "var(--primary)", transition: "width 0.3s ease" }}></div>
-            </div>
-            
-            <div style={{ marginTop: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
-                <span style={{ fontWeight: "bold", color: "var(--text-main)", fontSize: "1.2rem" }}>
-                    {updateProgress}%
-                </span>
-                <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                    {processedCards} / {totalCards} cartes traitees
-                </span>
-            </div>
-
-            <div style={{ marginTop: "30px", display: "flex", justifyContent: "center" }}>
-                <button 
-                    className="btn-primary" 
-                    onClick={closeModal} 
-                    disabled={isUpdatingCollection}
-                    style={{ opacity: isUpdatingCollection ? 0.5 : 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer", padding: "10px 30px" }}
-                >
-                    {isUpdatingCollection ? "Veuillez patienter..." : "Terminer"}
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* --- MODALES --- */}
+      
+      {/* MODALE AVATAR COMPLETEMENT RESTAUREE */}
       {activeModal === "avatar" && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" style={{ width: "650px", maxWidth: "90%", display: "flex", flexDirection: "column", maxHeight: "85vh" }} onClick={e => e.stopPropagation()}>
@@ -501,13 +542,13 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                             const img = c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop;
                             if (!img) return null;
                             return (
-                            <div key={i} onClick={() => setImageToCrop(`http://localhost:8000/auth/proxy-image?url=${encodeURIComponent(img)}`)} style={{ cursor: "pointer" }}>
+                            <div key={i} onClick={() => setImageToCrop(`http://127.0.0.1:8000/auth/proxy-image?url=${encodeURIComponent(img)}`)} style={{ cursor: "pointer" }}>
                                 <img src={img} alt={c.name} title={c.name} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: "8px", border: "2px solid transparent", transition: "border 0.2s" }} onMouseOver={e => e.target.style.borderColor="var(--primary)"} onMouseOut={e => e.target.style.borderColor="transparent"} />
                                 <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
                             </div>
                             );
                         })}
-                        {!isSearching && cardSearch && avatarResults.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>Aucun resultat avec illustration.</div>}
+                        {!isSearching && cardSearch && avatarResults.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>Aucun résultat avec illustration.</div>}
                         </div>
                     </div>
 
@@ -516,6 +557,91 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                     </div>
                 </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODALE SETUP MFA */}
+      {activeModal === "setupMfa" && mfaSetupData && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" style={{ width: "450px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: "var(--primary)" }}>Activer la Double Authentification</h3>
+            <p style={{ color: "var(--text-main)", fontSize: "0.9rem", marginBottom: "20px" }}>
+                1. Scannez ce QR Code avec une application comme <strong>Google Authenticator</strong> ou <strong>Authy</strong>.
+            </p>
+            
+            <div style={{ background: "white", padding: "15px", display: "inline-block", borderRadius: "8px", marginBottom: "20px" }}>
+                <QRCodeCanvas value={mfaSetupData.uri} size={200} level={"H"} />
+            </div>
+
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "20px" }}>
+                Ou saisissez ce code manuellement : <br/>
+                <strong style={{ color: "var(--text-main)", letterSpacing: "2px" }}>{mfaSetupData.secret}</strong>
+            </p>
+
+            <form onSubmit={handleEnableMfa}>
+                <div style={{ textAlign: "left", marginBottom: "20px" }}>
+                    <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-main)" }}>
+                        2. Entrez le code à 6 chiffres généré :
+                    </label>
+                    <input 
+                        type="text" 
+                        required 
+                        value={mfaCode} 
+                        onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="123456" 
+                        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--primary)", fontSize: "1.2rem", textAlign: "center", letterSpacing: "5px", fontWeight: "bold" }} 
+                    />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                    <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
+                    <button type="submit" className="btn-primary" disabled={mfaCode.length !== 6}>Valider et Activer</button>
+                </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DESACTIVER MFA */}
+      {activeModal === "disableMfa" && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" style={{ width: "400px" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Désactiver la Double Authentification</h3>
+            <p style={{ color: "var(--text-main)", fontSize: "0.9rem", marginBottom: "20px" }}>
+                Désactiver l'A2F rendra votre compte vulnérable. Veuillez entrer votre mot de passe pour confirmer.
+            </p>
+            <form onSubmit={handleDisableMfa}>
+                <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Mot de passe actuel</label>
+                    <input type="password" required value={mfaDisablePassword} onChange={e => setMfaDisablePassword(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                    <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
+                    <button type="submit" className="btn-primary" style={{ background: "var(--danger)", border: "none" }} disabled={!mfaDisablePassword}>Désactiver</button>
+                </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALES UPDATE, NOM, EMAIL, PASSWORD, DELETE... */}
+      {activeModal === "updateCollection" && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: "450px", textAlign: "center", boxSizing: "border-box", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: "var(--primary)", marginBottom: "20px" }}>Mise à jour de la collection</h3>
+            <p style={{ fontSize: "0.9rem", color: "var(--text-main)", marginBottom: "25px" }}>Synchronisation des prix et légalités avec Scryfall...</p>
+            <div style={{ height: "20px", width: "100%", boxSizing: "border-box", background: "var(--bg-main)", borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
+                <div style={{ height: "100%", width: `${updateProgress}%`, background: "var(--primary)", transition: "width 0.3s ease" }}></div>
+            </div>
+            <div style={{ marginTop: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
+                <span style={{ fontWeight: "bold", color: "var(--text-main)", fontSize: "1.2rem" }}>{updateProgress}%</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{processedCards} / {totalCards} cartes traitées</span>
+            </div>
+            <div style={{ marginTop: "30px", display: "flex", justifyContent: "center" }}>
+                <button className="btn-primary" onClick={closeModal} disabled={isUpdatingCollection} style={{ opacity: isUpdatingCollection ? 0.5 : 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer", padding: "10px 30px" }}>
+                    {isUpdatingCollection ? "Veuillez patienter..." : "Terminer"}
+                </button>
+            </div>
           </div>
         </div>
       )}
@@ -548,7 +674,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                 <input type="email" required value={emailData.new_email} onChange={e => setEmailData({...emailData, new_email: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Mot de passe actuel (Securite)</label>
+                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Mot de passe actuel (Sécurité)</label>
                 <input type="password" required value={emailData.password} onChange={e => setEmailData({...emailData, password: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
@@ -591,7 +717,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content" style={{ width: "450px", border: "1px solid var(--danger)" }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Vider la collection</h3>
-                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action est irreversible. Toutes vos cartes enregistrees seront supprimees. Vos decks seront conserves mais s'afficheront comme virtuels si les cartes manquent.</p>
+                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action est irréversible. Toutes vos cartes enregistrées seront supprimées. Vos decks seront conservés mais s'afficheront comme virtuels si les cartes manquent.</p>
                 <div style={{ marginBottom: 20 }}>
                     <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
                     <input type="text" className="input-field" placeholder="SUPPRIMER" value={deleteCollectionConfirm} onChange={e => setDeleteCollectionConfirm(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteCollectionConfirm === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} autoFocus />
@@ -608,7 +734,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content" style={{ width: "450px", border: "1px solid var(--danger)" }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Supprimer le compte</h3>
-                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action detruira completement votre profil, vos decks, et toute votre collection sans aucun moyen de retour en arriere.</p>
+                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action détruira complètement votre profil, vos decks, et toute votre collection sans aucun moyen de retour en arrière.</p>
                 <div style={{ marginBottom: 20 }}>
                     <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer l'adieu :</label>
                     <input type="text" className="input-field" placeholder="SUPPRIMER" value={deleteAccountConfirm} onChange={e => setDeleteAccountConfirm(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteAccountConfirm === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} autoFocus />

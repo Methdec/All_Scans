@@ -4,63 +4,63 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     FRONTEND (React)                             │
-│              http://localhost:3000                               │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ Components: CardList, CardGrid, AuthPages, etc.          │  │
-│  │ - State Management via React Hooks                       │  │
-│  │ - Routing: React Router DOM                              │  │
-│  │ - Styling: CSS + Framer Motion animations                │  │
-│  └─────────────────┬──────────────────────────────────────────┘  │
-└────────────────────┼──────────────────────────────────────────────┘
+│                     FRONTEND (React)                            │
+│              http://localhost:3000                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ Components: CardList, CardGrid, AuthPages, etc.            │ │
+│  │ - State Management via React Hooks                         │ │
+│  │ - Routing: React Router DOM                                │ │
+│  │ - Styling: CSS + Framer Motion animations                  │ │
+│  └─────────────────┬──────────────────────────────────────────┘ │
+└────────────────────┼────────────────────────────────────────────┘
                      │
                      │ HTTP/HTTPS Requests
                      │ CORS Enabled
                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    BACKEND (FastAPI)                             │
-│              http://localhost:8000                               │
-│  ┌────────────────────────────────────────────────────────────┐  │
+│                    BACKEND (FastAPI)                            │
+│              http://127.0.0.1:8000                              │
+│  ┌───────────────────────────────────────────────────────────┐  │
 │  │  API GATEWAY & MIDDLEWARE                                 │  │
 │  │  - CORS Middleware (Localhost:3000)                       │  │
 │  │  - Request/Response Handling                              │  │
 │  │  - Authentication (JWT/Passlib)                           │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │           ROUTES & API ENDPOINTS                           │  │
-│  │                                                            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │           ROUTES & API ENDPOINTS                          │  │
+│  │                                                           │  │
 │  │  /auth       → Authentification (Login/Register)          │  │
-│  │  /users      → Gestion des utilisateurs                  │  │
+│  │  /users      → Gestion des utilisateurs                   │  │
 │  │  /cards      → Catalogue de cartes                        │  │
 │  │  /user-cards → Collections personnelles                   │  │
 │  │  /items      → Articles/Ressources                        │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │          BUSINESS LOGIC & MODELS                           │  │
-│  │                                                            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │          BUSINESS LOGIC & MODELS                          │  │
+│  │                                                           │  │
 │  │  - User (authentification, profil)                        │  │
 │  │  - Card (cartes du jeu)                                   │  │
 │  │  - UserCard (cartes possédées)                            │  │
 │  │  - Item (articles, ressources)                            │  │
-│  └─────────────────┬──────────────────────────────────────────┘  │
-└────────────────────┼──────────────────────────────────────────────┘
+│  └─────────────────┬─────────────────────────────────────────┘  │
+└────────────────────┼────────────────────────────────────────────┘
                      │
                      │ PyMongo Driver
                      │ TCP Connection (port 27017)
                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  DATABASE (MongoDB)                              │
-│              mongodb://localhost:27017                           │
-│  ┌────────────────────────────────────────────────────────────┐  │
+│                  DATABASE (MongoDB)                             │
+│              mongodb://localhost:27017                          │
+│  ┌───────────────────────────────────────────────────────────┐  │
 │  │ Database: "All_scans"                                     │  │
-│  │                                                            │  │
+│  │                                                           │  │
 │  │  Collections:                                             │  │
-│  │  ├── Users        (profils utilisateurs)                 │  │
-│  │  ├── Cards        (cartes disponibles)                   │  │
-│  │  ├── UserCards    (collections personnelles)            │  │
-│  │  └── Items        (articles/ressources)                 │  │
-│  │                                                            │  │
-│  └────────────────────────────────────────────────────────────┘  │
+│  │  ├── Users        (profils utilisateurs)                  │  │
+│  │  ├── Cards        (cartes disponibles)                    │  │
+│  │  ├── UserCards    (collections personnelles)              │  │
+│  │  └── Items        (articles/ressources)                   │  │
+│  │                                                           │  │
+│  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,7 +74,7 @@
 ```javascript
 // frontend/src/components/LoginPage.js
 const handleLogin = async (email, password) => {
-  const response = await fetch('http://localhost:8000/auth/login', {
+  const response = await fetch('http://127.0.0.1:8000/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -124,7 +124,7 @@ async def login(request: LoginRequest):
 // frontend/src/components/CardGrid.js
 useEffect(() => {
   const fetchCards = async () => {
-    const response = await fetch('http://localhost:8000/cards?skip=0&limit=20', {
+    const response = await fetch('http://127.0.0.1:8000/cards?skip=0&limit=20', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -180,7 +180,7 @@ async def get_cards(
 ```javascript
 // frontend/src/components/CardDetails.js
 const handleAddToCollection = async (cardId) => {
-  const response = await fetch('http://localhost:8000/user-cards', {
+  const response = await fetch('http://127.0.0.1:8000/user-cards', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -240,33 +240,33 @@ async def add_card_to_collection(
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                   SECURITY FLOW                                  │
+│                   SECURITY FLOW                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. LOGIN                                                        │
+│                                                                 │
+│  1. LOGIN                                                       │
 │     Client envoie: { email, password }                          │
-│                      ↓                                           │
+│                      ↓                                          │
 │     Backend hash le password avec bcrypt et compare             │
-│                      ↓                                           │
+│                      ↓                                          │
 │     Backend crée un JWT token valable ~24h                      │
-│                      ↓                                           │
-│     Client reçoit: { access_token: "eyJ0eX..." }               │
-│                                                                  │
-│  2. AUTHENTICATED REQUESTS                                       │
+│                      ↓                                          │
+│     Client reçoit: { access_token: "eyJ0eX..." }                │
+│                                                                 │
+│  2. AUTHENTICATED REQUESTS                                      │
 │     Client envoie header: Authorization: Bearer <token>         │
-│                      ↓                                           │
+│                      ↓                                          │
 │     Backend vérifie le token avec JWT secret                    │
-│                      ↓                                           │
-│     Backend récupère l'user_id du token                        │
-│                      ↓                                           │
+│                      ↓                                          │
+│     Backend récupère l'user_id du token                         │
+│                      ↓                                          │
 │     Request acceptée ou rejetée (401/403)                       │
-│                                                                  │
-│  Technologies utilisées:                                         │
-│  - bcrypt: Hashage des mots de passe                           │
-│  - passlib: Gestion des mots de passe sécurisés                │
-│  - JWT (PyJWT): Tokens d'authentification                      │
-│  - CORS Middleware: Contrôle des origines                      │
-│                                                                  │
+│                                                                 │
+│  Technologies utilisées:                                        │
+│  - bcrypt: Hashage des mots de passe                            │
+│  - passlib: Gestion des mots de passe sécurisés                 │
+│  - JWT (PyJWT): Tokens d'authentification                       │
+│  - CORS Middleware: Contrôle des origines                       │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -329,7 +329,7 @@ All_Scans/
 ### **Étape 1: Frontend envoie la requête**
 ```javascript
 const createCard = async (cardData) => {
-  const response = await fetch('http://localhost:8000/cards', {
+  const response = await fetch('http://127.0.0.1:8000/cards', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -437,7 +437,7 @@ Items
 
 ```bash
 # 1. Login
-curl -X POST http://localhost:8000/auth/login \
+curl -X POST http://127.0.0.1:8000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "mypass123"}'
 
@@ -445,11 +445,11 @@ curl -X POST http://localhost:8000/auth/login \
 # {"access_token": "eyJ0eX...", "token_type": "bearer"}
 
 # 2. Récupérer les cartes avec le token
-curl -X GET http://localhost:8000/cards?skip=0&limit=10 \
+curl -X GET http://127.0.0.1:8000/cards?skip=0&limit=10 \
   -H "Authorization: Bearer eyJ0eX..."
 
 # 3. Ajouter une carte à la collection
-curl -X POST http://localhost:8000/user-cards \
+curl -X POST http://127.0.0.1:8000/user-cards \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJ0eX..." \
   -d '{"card_id": "65c123abc...", "quantity": 1}'

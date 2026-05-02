@@ -81,7 +81,7 @@ export default function DeckStats({ deck, onUpdate }) {
     closeInfoModal();
     setLoadingLands(true);
     try {
-        const res = await fetch(`http://localhost:8000/items/${deck.id}/auto_balance_lands`, {
+        const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}/auto_balance_lands`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include"

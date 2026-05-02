@@ -31,7 +31,7 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
       setIsFlipped(false);
       setError("");
       try {
-        const res = await fetch(`http://localhost:8000/cards/${cardId}`, { credentials: "include" });
+        const res = await fetch(`http://127.0.0.1:8000/cards/${cardId}`, { credentials: "include" });
         if (!res.ok) throw new Error("Impossible de charger la carte");
         const data = await res.json();
         if (!cancelled) setFetchedCard(data);

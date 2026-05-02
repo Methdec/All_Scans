@@ -6,7 +6,7 @@ def extract_card_fields(scryfall_data: dict) -> dict:
     image_normal = scryfall_data.get("image_uris", {}).get("normal")
     image_small = scryfall_data.get("image_uris", {}).get("small")
     image_border_crop = scryfall_data.get("image_uris", {}).get("border_crop")
-    image_art_crop = scryfall_data.get("image_uris", {}).get("art_crop") # NOUVEAU
+    image_art_crop = scryfall_data.get("image_uris", {}).get("art_crop")
     
     mana_cost = scryfall_data.get("mana_cost", "")
     oracle_text = scryfall_data.get("oracle_text", "")
@@ -20,7 +20,7 @@ def extract_card_fields(scryfall_data: dict) -> dict:
         image_normal = face0.get("image_uris", {}).get("normal")
         image_small = face0.get("image_uris", {}).get("small")
         image_border_crop = face0.get("image_uris", {}).get("border_crop")
-        image_art_crop = face0.get("image_uris", {}).get("art_crop") # NOUVEAU
+        image_art_crop = face0.get("image_uris", {}).get("art_crop")
         
         mana_cost = face0.get("mana_cost", "")
         oracle_text = face0.get("oracle_text", "")
@@ -36,7 +36,7 @@ def extract_card_fields(scryfall_data: dict) -> dict:
     def safe_float(val):
         try:
             return float(val) if val else 0.0
-        except:
+        except (ValueError, TypeError):
             return 0.0
 
     prices = {
@@ -60,7 +60,7 @@ def extract_card_fields(scryfall_data: dict) -> dict:
         "image_small": image_small,
         "image_normal": image_normal,
         "image_border_crop": image_border_crop,
-        "image_art_crop": image_art_crop, # NOUVEAU
+        "image_art_crop": image_art_crop,
         
         "mana_cost": mana_cost,
         "cmc": scryfall_data.get("cmc", 0.0),
@@ -77,9 +77,11 @@ def extract_card_fields(scryfall_data: dict) -> dict:
         "prices": prices,
         "purchase_uris": purchase_uris,
         "reprint": scryfall_data.get("reprint", False),
+        "released_at": scryfall_data.get("released_at"), # CORRIGE: utilisation de scryfall_data au lieu de card_data
         
         "card_faces": scryfall_data.get("card_faces")
     }
+
 
 class Card(BaseModel):
     id: Optional[str] = None
@@ -92,7 +94,7 @@ class Card(BaseModel):
     image_small: Optional[str] = None
     image_normal: Optional[str] = None
     image_border_crop: Optional[str] = None
-    image_art_crop: Optional[str] = None # NOUVEAU
+    image_art_crop: Optional[str] = None
     mana_cost: Optional[str] = None
     cmc: Optional[float] = 0.0
     type_line: Optional[str] = None
@@ -106,7 +108,10 @@ class Card(BaseModel):
     legalities: Optional[Dict[str, Any]] = None
     prices: Optional[Dict[str, float]] = None
     purchase_uris: Optional[Dict[str, str]] = None
+    reprint: Optional[bool] = False # AJOUTE: synchronisation avec la fonction d'extraction
+    released_at: Optional[str] = None # AJOUTE: synchronisation avec la fonction d'extraction
     card_faces: Optional[List[Dict[str, Any]]] = None
+
 
 def card_from_dict(data: dict) -> Card:
     return Card(
@@ -134,5 +139,7 @@ def card_from_dict(data: dict) -> Card:
         legalities=data.get("legalities", {}),
         prices=data.get("prices", {"usd": 0.0, "eur": 0.0}),
         purchase_uris=data.get("purchase_uris", {}),
+        reprint=data.get("reprint", False),
+        released_at=data.get("released_at"),
         card_faces=data.get("card_faces")
     )

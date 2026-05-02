@@ -40,7 +40,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
     });
 
     try {
-        const res = await fetch("http://localhost:8000/usercards/import", {
+        const res = await fetch("http://127.0.0.1:8000/usercards/import", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -53,7 +53,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
         let errorsCount = 0;
         const interval = setInterval(async () => {
             try {
-                const progRes = await fetch("http://localhost:8000/usercards/import/progress", {
+                const progRes = await fetch("http://127.0.0.1:8000/usercards/import/progress", {
                     method: "GET",
                     credentials: "include"
                 });

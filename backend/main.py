@@ -7,6 +7,7 @@ from routes.auth_routes import router as auth_router
 from routes.user_card_routes import router as user_card_router
 from routes.item_routes import router as item_router
 from routes.history_routes import router as history_router
+from routes.tags_routes import router as tags_routes
 
 app = FastAPI(title="All Scans API")
 
@@ -15,7 +16,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "http://localhost:3000/",
+        "http://127.0.0.1:3000/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -29,6 +32,7 @@ app.include_router(user_card_router)
 app.include_router(card_router)
 app.include_router(item_router)
 app.include_router(history_router)
+app.include_router(tags_routes, prefix="/tags", tags=["tags"])
 
 @app.get("/")
 def home():

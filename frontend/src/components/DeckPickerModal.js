@@ -7,7 +7,7 @@ export default function DeckPickerModal({ onClose, onSelect }) {
 
   // Charger la liste des decks au montage
   useEffect(() => {
-    fetch("http://localhost:8000/items/all_lists_and_decks", { credentials: "include" })
+    fetch("http://127.0.0.1:8000/items/all_lists_and_decks", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         // On ne garde que les decks (pas les listes si tu en as, ou les dossiers)

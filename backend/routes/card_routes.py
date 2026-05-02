@@ -77,6 +77,7 @@ async def search_user_cards(
     colors: Optional[str] = None,
     color_mode: str = Query("exact", description="exact ou subset"),
     type_line: Optional[str] = None,
+    tags: Optional[str] = None,
     keywords: Optional[str] = None,
     cmc: Optional[float] = None,
     oracle_text: Optional[str] = None,
@@ -87,11 +88,33 @@ async def search_user_cards(
     format_legality: Optional[str] = None,
     is_legal: Optional[bool] = None,
     sort_by: str = "name",
+    sort_dir: int = 1,
+    set_code: Optional[str] = None,
     page: int = 1,
     limit: int = 200
 ):
     try:
-        pipeline = [{"$match": {"user_id": user_id}}]
+        initial_match = {"user_id": user_id}
+        
+        if tags:
+            tags_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
+            included_tags = [t for t in tags_list if not t.startswith("-")]
+            excluded_tags = [t[1:] for t in tags_list if t.startswith("-")]
+            
+            if included_tags:
+                initial_match["tags"] = {"$all": included_tags}
+                
+            if excluded_tags:
+                if "tags" in initial_match:
+                    initial_match["tags"]["$nin"] = excluded_tags
+                else:
+                    initial_match["tags"] = {"$nin": excluded_tags}
+
+            if set_code:
+                initial_match["card_id"] = {"$regex": f"^{set_code.lower()}"}
+
+        pipeline = [{"$match": initial_match}]
+        
         match_filters = {}
 
         if name:
@@ -156,46 +179,67 @@ async def search_user_cards(
             else:
                 match_filters[field_path] = {"$in": ["legal", "restricted"]}
 
-        if match_filters:
-            pipeline.append({"$match": match_filters})
+        if set_code:
+            match_filters["set"] = set_code.lower()
 
         skip = (page - 1) * limit
-        sort_field = "name" if sort_by == "name" else sort_by
+        
+        sort_dir_val = int(sort_dir) if int(sort_dir) in [1, -1] else 1
+        sort_field_map = {
+            "count": "count",
+            "price": "prices.eur",
+            "set": "set_name",
+            "name": "name"
+        }
+        actual_sort_field = sort_field_map.get(sort_by, "name")
+
+        # Construction dynamique du sous-pipeline data
+        data_pipeline = [
+            {
+                "$lookup": {
+                    "from": "Cards",
+                    "localField": "card_id",
+                    "foreignField": "id",
+                    "as": "details"
+                }
+            },
+            {"$unwind": "$details"},
+            {"$replaceRoot": {"newRoot": {"$mergeObjects": ["$details", "$$ROOT"]}}}
+        ]
+
+        if match_filters:
+            data_pipeline.append({"$match": match_filters})
+
+        data_pipeline.extend([
+            {"$sort": {actual_sort_field: sort_dir_val}},
+            {"$skip": skip},
+            {"$limit": limit},
+            {
+                "$project": {
+                    "_id": 1,
+                    "count": 1,
+                    "is_foil": 1, 
+                    "tags": 1, 
+                    "name": "$details.name",
+                    "rarity": "$details.rarity",
+                    "colors": "$details.colors",
+                    "oracle_text": "$details.oracle_text",
+                    "power": "$details.power",
+                    "toughness": "$details.toughness",
+                    "image_normal": "$details.image_normal",
+                    "image_art_crop": "$details.image_art_crop",
+                    "set_name": "$details.set_name",
+                    "set": "$details.set",
+                    "prices": "$details.prices",
+                    "id": "$details.id"
+                }
+            }
+        ])
 
         pipeline.append({
             "$facet": {
                 "metadata": [{"$count": "total"}],
-                "data": [
-                    {"$sort": {sort_field: 1}},
-                    {"$skip": skip},
-                    {"$limit": limit},
-                    {
-                        "$lookup": {
-                            "from": "Cards",
-                            "localField": "card_id",
-                            "foreignField": "id",
-                            "as": "details"
-                        }
-                    },
-                    {"$unwind": "$details"},
-                    {
-                        "$project": {
-                            "_id": 1,
-                            "count": 1,
-                            "is_foil": 1, # AJOUT MAJEUR : Le frontend peut desormais voir si la carte est Foil
-                            "name": 1,
-                            "rarity": 1,
-                            "colors": 1,
-                            "oracle_text": 1,
-                            "power": 1,
-                            "toughness": 1,
-                            "image_normal": "$details.image_normal",
-                            "image_art_crop": "$details.image_art_crop", # Ajout pour preparer l'avatar utilisateur !
-                            "set_name": "$details.set_name",
-                            "id": "$details.id"
-                        }
-                    }
-                ]
+                "data": data_pipeline
             }
         })
 
@@ -226,7 +270,6 @@ async def get_single_card(card_id: str, is_foil: Optional[bool] = None, user_id:
         # --- FALLBACK SCRYFALL SECURISE ---
         if not card and not ObjectId.is_valid(card_id):
             try:
-                # Scryfall bloque souvent si on ne met pas de User-Agent
                 headers = {"User-Agent": "MyMTGApp/1.0", "Accept": "application/json"}
                 async with httpx.AsyncClient(timeout=15.0) as client:
                     resp = await client.get(f"https://api.scryfall.com/cards/{card_id}", headers=headers)
@@ -255,6 +298,7 @@ async def get_single_card(card_id: str, is_foil: Optional[bool] = None, user_id:
         card["count"] = uc["count"] if uc else 0
         card["owned"] = uc is not None
         card["is_foil"] = uc["is_foil"] if uc and "is_foil" in uc else (is_foil or False)
+        card["tags"] = uc.get("tags", []) if uc else [] # NOUVEAU : Renvoie les tags dans la modale
         
         return card
     except HTTPException:
@@ -279,7 +323,6 @@ async def delete_card(card_id: str, is_foil: Optional[bool] = None, user_id: str
 
         res = user_cards_collection.delete_one(uc_query)
         
-        # Nettoyage global uniquement si l'utilisateur ne possede plus AUCUNE version de la carte
         remaining = user_cards_collection.count_documents({"user_id": user_id, "card_id": target_id})
         if remaining == 0:
             cards_collection.update_one({"id": target_id}, {"$pull": {"owners": user_id}})
@@ -293,3 +336,98 @@ async def delete_card(card_id: str, is_foil: Optional[bool] = None, user_id: str
 @router.post("/cards/update-multifaces")
 async def update_multiface_cards(user_id: str = Depends(get_current_user)):
     return {"message": "Non implemente"}
+
+
+@router.get("/cards/collection/sets")
+async def get_collection_sets(sort_dir: int = -1, user_id: str = Depends(get_current_user)):
+    
+    # On s'assure que la direction est bien 1 ou -1
+    s_dir = 1 if sort_dir == 1 else -1
+
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        {
+            "$lookup": {
+                "from": "Cards",
+                "localField": "card_id",
+                "foreignField": "id",
+                "as": "details"
+            }
+        },
+        {"$unwind": "$details"},
+        {
+            "$group": {
+                "_id": "$details.set",
+                "set_name": {"$first": "$details.set_name"},
+                "released_at": {"$first": "$details.released_at"},
+                "count": {"$sum": "$count"}
+            }
+        },
+        # On trie d'abord par date, puis par ordre alphabetique en secours
+        {"$sort": {"released_at": s_dir, "set_name": 1}}, 
+        {
+            "$project": {
+                "_id": 0,
+                "set_code": "$_id",
+                "set_name": 1,
+                "released_at": 1,
+                "count": 1
+            }
+        }
+    ]
+    sets = list(user_cards_collection.aggregate(pipeline))
+    return {"sets": sets}
+
+
+@router.get("/cards/prints/{oracle_id}")
+async def get_card_prints(oracle_id: str, user_id: str = Depends(get_current_user)):
+    """Recupere toutes les impressions (reprints) d'une carte via son oracle_id depuis Scryfall."""
+    try:
+        url = f"https://api.scryfall.com/cards/search?order=released&q=oracle_id:{oracle_id}&unique=prints"
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(url)
+            
+            if resp.status_code != 200:
+                raise HTTPException(status_code=404, detail="Impressions introuvables sur Scryfall.")
+            
+            data = resp.json().get("data", [])
+            
+            # On passe chaque impression dans ton modele d'extraction pour standardiser la donnee
+            cleaned_prints = [extract_card_fields(c) for c in data]
+            
+            return {"prints": cleaned_prints}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cards/collection/tags_summary")
+async def get_collection_tags_summary(sort_dir: int = 1, user_id: str = Depends(get_current_user)):
+    """Récupère la liste des tags avec le nombre total de cartes pour chacun."""
+    
+    s_dir = 1 if sort_dir == 1 else -1
+
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        # $unwind sépare le tableau : une carte avec 2 tags comptera dans les 2 groupes
+        # preserveNullAndEmptyArrays permet de garder les cartes sans tags pour les regrouper
+        {"$unwind": {"path": "$tags", "preserveNullAndEmptyArrays": True}},
+        {
+            "$group": {
+                # Si le tag est nul ou vide, on le nomme "Sans tag"
+                "_id": {"$ifNull": ["$tags", "Sans tag"]},
+                "count": {"$sum": "$count"}
+            }
+        },
+        {"$sort": {"_id": s_dir}},
+        {
+            "$project": {
+                "_id": 0,
+                "tag_name": "$_id",
+                "count": 1
+            }
+        }
+    ]
+    
+    tags_summary = list(user_cards_collection.aggregate(pipeline))
+    return {"tags_summary": tags_summary}

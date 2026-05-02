@@ -101,7 +101,6 @@ async def get_item_details(item_id: str, user_id: str = Depends(get_current_user
             global_cards = list(cards_collection.find({"id": {"$in": unique_ids}}))
             cards_map = {c["id"]: c for c in global_cards}
             
-            # --- CORRECTION 1 : On compte TOUTES les editions et foils par le NOM ! ---
             deck_card_names = [c.get("name") for c in global_cards if c.get("name")]
             
             user_cards_cursor = user_cards_collection.find({"user_id": user_id, "name": {"$in": deck_card_names}})
@@ -112,13 +111,14 @@ async def get_item_details(item_id: str, user_id: str = Depends(get_current_user
                     user_cards_map[c_name] = user_cards_map.get(c_name, 0) + uc.get("count", 0)
             
             enriched_cards = []
+            # NOUVEAU : On récupère la liste des commandants du deck depuis la DB
+            deck_commanders = item.get("commanders", [])
             
             for card_id in unique_ids:
                 details = cards_map.get(card_id)
                 if details:
                     m_qty = main_counts.get(card_id, 0)
                     s_qty = side_counts.get(card_id, 0)
-                    
                     c_name = details.get("name")
                     
                     base_data = {
@@ -129,9 +129,12 @@ async def get_item_details(item_id: str, user_id: str = Depends(get_current_user
                         "mana_cost": details.get("mana_cost", ""), 
                         "type_line": details.get("type_line", ""),
                         "colors": details.get("colors", []),
+                        "color_identity": details.get("color_identity", []),
+                        "legalities": details.get("legalities", {}),
                         "cmc": details.get("cmc", 0),
                         "set_name": details.get("set_name", details.get("set", "???").upper()),
-                        "owned_count": user_cards_map.get(c_name, 0) # Utilise la quantité totale possédée pour ce nom !
+                        "owned_count": user_cards_map.get(c_name, 0),
+                        "is_commander": card_id in deck_commanders
                     }
                     
                     if m_qty > 0:
@@ -646,3 +649,41 @@ async def import_deck_from_text(data: dict = Body(...), user_id: str = Depends(g
         "id": str(result.inserted_id),
         "missing_cards": missing_cards
     }
+
+
+@router.post("/{item_id}/toggle_commander")
+async def toggle_commander(item_id: str, data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    """
+    Ajoute ou retire l'ID d'une carte de la liste des commandants du deck.
+    """
+    card_id = data.get("card_id")
+    is_commander = data.get("is_commander", False)
+
+    if not card_id:
+        raise HTTPException(status_code=400, detail="L'ID de la carte est manquant.")
+
+    deck = items_collection.find_one({"_id": ObjectId(item_id), "user_id": user_id})
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck introuvable.")
+
+    # On vérifie que la carte fait bien partie du deck
+    if card_id not in deck.get("cards", []) and card_id not in deck.get("sideboard", []):
+        raise HTTPException(status_code=404, detail="Cette carte ne fait pas partie du deck.")
+
+    # On récupère la liste des commandants actuelle (ou une liste vide si elle n'existe pas encore)
+    commanders = deck.get("commanders", [])
+
+    if is_commander:
+        if card_id not in commanders:
+            commanders.append(card_id)
+    else:
+        if card_id in commanders:
+            commanders.remove(card_id)
+
+    # On sauvegarde la liste mise à jour
+    items_collection.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"commanders": commanders}}
+    )
+
+    return {"message": "Statut de commandant mis a jour.", "is_commander": is_commander}

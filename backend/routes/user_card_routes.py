@@ -1,6 +1,6 @@
 # routes/user_card_routes.py
-from fastapi import APIRouter, HTTPException, Depends, Request, Body
-from database import user_cards_collection, cards_collection, history_collection
+from fastapi import APIRouter, HTTPException, Depends, Request, Body, Query
+from database import user_cards_collection, cards_collection, history_collection, tag_rules_collection
 from routes.auth_routes import get_current_user
 from models.card import extract_card_fields
 from bson import ObjectId
@@ -8,6 +8,8 @@ from datetime import datetime
 from typing import List, Dict
 from fastapi.responses import PlainTextResponse, Response
 from utils.import_parser import parse_mtg_line
+from bson.errors import InvalidId
+from utils.tags_engine import get_automated_tags
 import httpx
 import asyncio
 import logging
@@ -91,12 +93,18 @@ async def perform_import(data: List, user_id: str):
         cards_found = []
         cards_not_found = []
         
+        # NOUVEAU : On récupère les règles de l'utilisateur avant la boucle
+        user_rules = list(tag_rules_collection.find({"user_id": uid}))
+        
         for idx, scryfall_data in enumerate(fetched_cards):
             if idx % 5 == 0:
                 await asyncio.sleep(0.02)
 
             cleaned = extract_card_fields(scryfall_data)
             card_id = cleaned.get("id")
+            
+            # NOUVEAU : On calcule les tags automatiques pour cette carte
+            auto_tags = get_automated_tags(cleaned, user_rules)
             
             set_code = str(scryfall_data.get("set", "")).lower()
             cn = str(scryfall_data.get("collector_number", "")).lower()
@@ -133,8 +141,13 @@ async def perform_import(data: List, user_id: str):
                     })
                     
                     if existing:
-                        user_cards_collection.update_one({"_id": existing["_id"]}, {"$inc": {"count": qty}})
+                        # NOUVEAU : Ajout des tags en cas de mise à jour
+                        update_doc = {"$inc": {"count": qty}}
+                        if auto_tags:
+                            update_doc["$addToSet"] = {"tags": {"$each": auto_tags}}
+                        user_cards_collection.update_one({"_id": existing["_id"]}, update_doc)
                     else:
+                        # NOUVEAU : Ajout des tags en cas de création
                         user_cards_collection.insert_one({
                             "user_id": uid,
                             "card_id": card_id,
@@ -159,7 +172,8 @@ async def perform_import(data: List, user_id: str):
                             "toughness": cleaned.get("toughness", ""),
                             "legalities": cleaned.get("legalities", {}),
                             "prices": cleaned.get("prices", {}),
-                            "purchase_uris": cleaned.get("purchase_uris", {})
+                            "purchase_uris": cleaned.get("purchase_uris", {}),
+                            "tags": auto_tags # <-- INCLUSION ICI
                         })
                     
                     cards_found.append({
@@ -177,7 +191,7 @@ async def perform_import(data: List, user_id: str):
         for key, info in quantity_map.items():
             is_foil_tag = " (Foil)" if info.get("is_foil") else ""
             cards_not_found.append({
-                "id": "unknown", # Remplacement de None par une chaine securisee
+                "id": "unknown",
                 "name": f"{info['name']}{is_foil_tag}",
                 "found": False,
                 "quantity": info["quantity"]
@@ -186,12 +200,7 @@ async def perform_import(data: List, user_id: str):
         total_found = len(cards_found)
         total_missing = len(cards_not_found)
         
-        if total_missing == 0:
-            status = "success"
-        elif total_found > 0:
-            status = "warning"
-        else:
-            status = "error"
+        status = "success" if total_missing == 0 else "warning" if total_found > 0 else "error"
 
         history_entry = {
             "user_id": uid,
@@ -252,7 +261,6 @@ async def update_user_card_count(card_id: str, body: dict = Body(...), user_id: 
         return {"message": "OK"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/usercards")
 async def add_user_card(request: Request, user_id: str = Depends(get_current_user)):
     try:
@@ -275,8 +283,16 @@ async def add_user_card(request: Request, user_id: str = Depends(get_current_use
             "is_foil": is_foil
         })
         
+        # NOUVEAU : Application du moteur de tags
+        user_rules = list(tag_rules_collection.find({"user_id": uid}))
+        auto_tags = get_automated_tags(cleaned, user_rules)
+        print(f"[Tags] Ajout manuel de {cleaned.get('name')} -> Tags trouvés : {auto_tags}")
+        
         if existing:
-            user_cards_collection.update_one({"_id": existing["_id"]}, {"$inc": {"count": 1}})
+            update_doc = {"$inc": {"count": 1}}
+            if auto_tags:
+                update_doc["$addToSet"] = {"tags": {"$each": auto_tags}}
+            user_cards_collection.update_one({"_id": existing["_id"]}, update_doc)
         else:
             user_cards_collection.insert_one({
                 "user_id": uid, 
@@ -302,7 +318,8 @@ async def add_user_card(request: Request, user_id: str = Depends(get_current_use
                 "toughness": cleaned.get("toughness", ""),
                 "legalities": cleaned.get("legalities", {}),
                 "prices": cleaned.get("prices", {}),
-                "purchase_uris": cleaned.get("purchase_uris", {})
+                "purchase_uris": cleaned.get("purchase_uris", {}),
+                "tags": auto_tags # <-- INCLUSION ICI
             })
         return {"message": "Ajoute"}
     except Exception as e:
@@ -398,3 +415,162 @@ async def export_user_collection(format: str = "txt", user_id: str = Depends(get
     except Exception as e:
         logger.error(f"Erreur Export: {e}")
         raise HTTPException(status_code=500, detail="Erreur interne lors de l'exportation.")
+    
+
+
+@router.get("/me/collection/tags")
+async def get_my_collection_tags(user_id: str = Depends(get_current_user)):
+    """Recupere la liste de tous les tags uniques utilises dans la collection de l'utilisateur."""
+    tags = user_cards_collection.distinct("tags", {"user_id": user_id})
+    clean_tags = [t for t in tags if t]
+    return {"tags": sorted(clean_tags)}
+
+
+
+@router.post("/{card_id}/tags")
+async def add_tag_to_card(card_id: str, data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    tag = data.get("tag")
+    if not tag:
+        raise HTTPException(status_code=400, detail="Le nom du tag est manquant.")
+        
+    clean_tag = tag.strip().lower()
+    
+    # Recherche flexible : soit l'ObjectId MongoDB, soit l'UUID Scryfall
+    query = {"user_id": user_id}
+    if ObjectId.is_valid(card_id):
+        query["_id"] = ObjectId(card_id)
+    else:
+        query["card_id"] = card_id
+        
+    # update_many permet de taguer toutes les versions (ex: foil et non-foil) d'un coup
+    result = user_cards_collection.update_many(
+        query,
+        {"$addToSet": {"tags": clean_tag}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Carte introuvable dans votre collection.")
+        
+    return {"message": "Tag ajoute avec succes", "tag": clean_tag}
+
+@router.delete("/{card_id}/tags")
+async def remove_tag_from_card(card_id: str, tag: str = Query(...), user_id: str = Depends(get_current_user)):
+    clean_tag = tag.strip().lower()
+    
+    query = {"user_id": user_id}
+    if ObjectId.is_valid(card_id):
+        query["_id"] = ObjectId(card_id)
+    else:
+        query["card_id"] = card_id
+    
+    result = user_cards_collection.update_many(
+        query,
+        {"$pull": {"tags": clean_tag}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Carte introuvable dans votre collection.")
+        
+    return {"message": "Tag supprime avec succes"}
+
+
+
+
+@router.post("/usercards/{old_card_id}/swap")
+async def swap_card_version(old_card_id: str, data: dict = Body(...), user_id: str = Depends(get_current_user)):
+    """Remplace une quantite specifique d'une carte par une autre version de cette carte."""
+    try:
+        uid = str(user_id)
+        new_card_data = data.get("new_card")
+        
+        # 1. Securite sur la quantite
+        try:
+            quantity = int(data.get("quantity", 1))
+        except (ValueError, TypeError):
+            quantity = 1
+            
+        is_foil = bool(data.get("is_foil", False))
+
+        if not new_card_data or not new_card_data.get("id"):
+            raise HTTPException(status_code=400, detail="Donnees de la nouvelle carte manquantes.")
+
+        new_card_id = new_card_data["id"]
+
+        # 2. Identifier l'ancienne carte
+        if ObjectId.is_valid(old_card_id):
+            old_query = {"user_id": uid, "_id": ObjectId(old_card_id)}
+        else:
+            old_query = {"user_id": uid, "card_id": old_card_id, "is_foil": is_foil}
+
+        old_uc = user_cards_collection.find_one(old_query)
+        if not old_uc:
+            raise HTTPException(status_code=404, detail="L'ancienne carte n'est pas dans votre collection.")
+
+        # 3. Recuperer les tags manuels existants pour les transferer
+        tags_to_transfer = old_uc.get("tags")
+        if not isinstance(tags_to_transfer, list):
+            tags_to_transfer = []
+
+        # 4. Appliquer le moteur de tags automatiques sur la NOUVELLE version
+        user_rules = list(tag_rules_collection.find({"user_id": uid}))
+        # On nettoie les champs de la nouvelle carte pour le moteur
+        cleaned_new_card = extract_card_fields(new_card_data)
+        auto_tags = get_automated_tags(cleaned_new_card, user_rules)
+        
+        # Fusionner les anciens tags manuels et les nouveaux tags automatiques
+        final_tags = list(set(tags_to_transfer + auto_tags))
+
+        # 5. Decrementer ou supprimer l'ancienne carte
+        current_count = old_uc.get("count", 1)
+        if current_count <= quantity:
+            user_cards_collection.delete_one(old_query)
+        else:
+            user_cards_collection.update_one(old_query, {"$inc": {"count": -quantity}})
+
+        # 6. Assurer que la nouvelle carte existe dans la base globale
+        new_card_data.pop("_id", None)
+        if not cards_collection.find_one({"id": new_card_id}):
+            new_card_data["owners"] = [uid]
+            cards_collection.insert_one(cleaned_new_card)
+        else:
+            cards_collection.update_one({"id": new_card_id}, {"$addToSet": {"owners": uid}})
+
+        # 7. Ajouter ou mettre a jour la nouvelle version chez l'utilisateur
+        new_query = {"user_id": uid, "card_id": new_card_id, "is_foil": is_foil}
+        new_uc = user_cards_collection.find_one(new_query)
+
+        if new_uc:
+            user_cards_collection.update_one(new_query, {
+                "$inc": {"count": quantity},
+                "$addToSet": {"tags": {"$each": final_tags}}
+            })
+        else:
+            user_doc = {
+                "user_id": uid,
+                "card_id": new_card_id,
+                "count": quantity,
+                "is_foil": is_foil,
+                "name": cleaned_new_card.get("name"),
+                "lang": cleaned_new_card.get("lang"),
+                "oracle_id": cleaned_new_card.get("oracle_id"),
+                "set": cleaned_new_card.get("set"),
+                "set_name": cleaned_new_card.get("set_name"),
+                "collector_number": cleaned_new_card.get("collector_number"),
+                "image_normal": cleaned_new_card.get("image_normal"),
+                "rarity": cleaned_new_card.get("rarity"),
+                "colors": cleaned_new_card.get("colors", []),
+                "type_line": cleaned_new_card.get("type_line", ""),
+                "oracle_text": cleaned_new_card.get("oracle_text", ""),
+                "cmc": cleaned_new_card.get("cmc", 0),
+                "prices": cleaned_new_card.get("prices", {}),
+                "tags": final_tags # Applique les tags calcules ici
+            }
+            user_cards_collection.insert_one(user_doc)
+
+        print(f"[Tags] Swap vers {cleaned_new_card.get('name')} termine avec tags : {final_tags}")
+        return {"message": "Echange reussi", "new_card_id": new_card_id}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

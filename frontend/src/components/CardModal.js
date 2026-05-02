@@ -18,7 +18,7 @@ function DeckPickerModal({ onClose, onSelect }) {
   useEffect(() => {
     const fetchDecks = async () => {
       try {
-        const res = await fetch("http://localhost:8000/items/all_lists_and_decks", { credentials: "include" });
+        const res = await fetch("http://127.0.0.1:8000/items/all_lists_and_decks", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           setDecks(data.items || []);
@@ -33,7 +33,7 @@ function DeckPickerModal({ onClose, onSelect }) {
     if (!newDeckName.trim()) return;
     setIsCreating(true);
     try {
-      const res = await fetch("http://localhost:8000/items", {
+      const res = await fetch("http://127.0.0.1:8000/items", {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ nom: newDeckName, type: "deck", format: newDeckFormat, parent_id: null })
       });
@@ -82,7 +82,7 @@ function DeckPickerModal({ onClose, onSelect }) {
   );
 }
 
-export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNext, onPrev, hasNext, hasPrev, deckContext }) {
+export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNext, onPrev, hasNext, hasPrev, deckContext, tagColors = {} }) {
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null); 
@@ -96,6 +96,14 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const [hasChanged, setHasChanged] = useState(false);
   const [notification, setNotification] = useState(null); 
   const [showDeckPicker, setShowDeckPicker] = useState(false);
+
+  const [newTag, setNewTag] = useState("");
+  const [isTagging, setIsTagging] = useState(false);
+  const [availableTags, setAvailableTags] = useState([]);
+
+  const [reprints, setReprints] = useState([]);
+  const [showReprints, setShowReprints] = useState(false);
+  const [loadingReprints, setLoadingReprints] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,13 +121,16 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       setImageLoading(true);
       setCurrentFaceIndex(0);
       setIsEditing(false);
+      setNewTag("");
+      setShowReprints(false);
+      setReprints([]);
       
       try {
         let foilQuery = "";
         if (isFoil === true) foilQuery = "?is_foil=true";
         else if (isFoil === false) foilQuery = "?is_foil=false";
 
-        const cardRes = await fetch(`http://localhost:8000/cards/${cardId}${foilQuery}`, { credentials: "include" });
+        const cardRes = await fetch(`http://127.0.0.1:8000/cards/${cardId}${foilQuery}`, { credentials: "include" });
         if (!cardRes.ok) {
             const errData = await cardRes.json().catch(() => ({}));
             let errorMessage = errData.detail || "Impossible de charger la carte.";
@@ -158,7 +169,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const handleAddToDeck = async (deckId) => {
     setShowDeckPicker(false);
     try {
-      const res = await fetch(`http://localhost:8000/items/${deckId}/add_card`, {
+      const res = await fetch(`http://127.0.0.1:8000/items/${deckId}/add_card`, {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ card_id: card?.id || card?._id || cardId, is_sideboard: false }),
       });
@@ -175,7 +186,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const handleUpdateCount = async () => {
     if (editCount < 0) return;
     try {
-      const res = await fetch(`http://localhost:8000/usercards/${cardId}`, {
+      const res = await fetch(`http://127.0.0.1:8000/usercards/${cardId}`, {
         method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: editCount, is_foil: !!isFoil }),
       });
@@ -186,6 +197,130 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       setNotification({ type: "success", message: "Quantite mise a jour !" });
       setTimeout(() => { setNotification(null); setIsEditing(false); }, 1000);
     } catch (err) { setNotification({ type: "error", message: "Erreur serveur." }); }
+  };
+
+  useEffect(() => {
+      const loadTags = async () => {
+          try {
+              const res = await fetch("http://127.0.0.1:8000/me/collection/tags", { credentials: "include" });
+              if (res.ok) {
+                  const data = await res.json();
+                  setAvailableTags(data.tags || []);
+              }
+          } catch (err) {}
+      };
+      if (card) loadTags();
+  }, [card]);
+
+  const handleAddTag = async (e) => {
+      e.preventDefault();
+      if (!newTag.trim()) return;
+      setIsTagging(true);
+      
+      try {
+          const res = await fetch(`http://127.0.0.1:8000/${cardId}/tags`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ tag: newTag.trim() })
+          });
+          
+          if (res.ok) {
+              const data = await res.json();
+              setCard(prev => ({ ...prev, tags: [...(prev.tags || []), data.tag] }));
+              setNewTag("");
+              setHasChanged(true); 
+          } else {
+              setNotification({ type: "error", message: "Erreur lors de l'ajout du tag." });
+              setTimeout(() => setNotification(null), 3000);
+          }
+      } catch (err) {
+          setNotification({ type: "error", message: "Erreur de communication." });
+          setTimeout(() => setNotification(null), 3000);
+      } finally {
+          setIsTagging(false);
+      }
+  };
+
+  const handleRemoveTag = async (tagToRemove) => {
+      try {
+          const res = await fetch(`http://127.0.0.1:8000/${cardId}/tags?tag=${encodeURIComponent(tagToRemove)}`, {
+              method: "DELETE",
+              credentials: "include"
+          });
+          
+          if (res.ok) {
+              setCard(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
+              setHasChanged(true);
+          } else {
+              setNotification({ type: "error", message: "Erreur lors de la suppression." });
+              setTimeout(() => setNotification(null), 3000);
+          }
+      } catch (err) {
+          setNotification({ type: "error", message: "Erreur de communication." });
+          setTimeout(() => setNotification(null), 3000);
+      }
+  };
+
+  const fetchReprints = async () => {
+    if (showReprints) {
+       setShowReprints(false);
+       return;
+    }
+    if (!card || !card.oracle_id) return;
+    
+    setShowReprints(true);
+    setLoadingReprints(true);
+    try {
+       const res = await fetch(`http://127.0.0.1:8000/cards/prints/${card.oracle_id}`, { credentials: "include" });
+       if (res.ok) {
+          const data = await res.json();
+          setReprints(data.prints || []);
+       }
+    } catch(e) {
+       console.error(e);
+    } finally {
+       setLoadingReprints(false);
+    }
+  };
+
+  const handleSwap = async (newCard) => {
+    if (newCard.id === card.id) return; 
+
+    // Sécurité : On n'échange pas une carte qu'on ne possède pas
+    if (!card.owned) {
+        setNotification({type: "error", message: "Ajoutez d'abord la carte à votre collection."});
+        setTimeout(() => setNotification(null), 3000);
+        return;
+    }
+
+    try {
+       let swapQty = isEditing ? parseInt(editCount) || 1 : 1;
+       if (swapQty <= 0) return;
+
+       const res = await fetch(`http://127.0.0.1:8000/usercards/${card.id}/swap`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          credentials: "include",
+          body: JSON.stringify({
+             new_card: newCard,
+             quantity: swapQty,
+             is_foil: !!isFoil
+          })
+       });
+
+       if (res.ok) {
+          setNotification({type: "success", message: "Version modifiée avec succès !"});
+          setHasChanged(true);
+          setTimeout(() => onClose(true), 1200); 
+       } else {
+          setNotification({type: "error", message: "Erreur lors de l'echange."});
+          setTimeout(() => setNotification(null), 3000);
+       }
+    } catch(e) {
+       setNotification({type: "error", message: "Erreur de connexion."});
+       setTimeout(() => setNotification(null), 3000);
+    }
   };
 
   const hasSeparateFaceImages = card?.card_faces && Array.isArray(card.card_faces) && card.card_faces.length > 1 && 
@@ -250,7 +385,6 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
     <>
     <div className="modal-overlay" onClick={(e) => e.target.classList.contains("modal-overlay") && handleManualClose()}>
       
-      {/* NOUVEAU LAYOUT : 1100px de large pour 3 colonnes */}
       <div className="modal-content" style={{ display: "flex", gap: "25px", width: "1100px", maxWidth: "95%", padding: "30px", position: "relative", overflow: "visible" }}>
         
         <button onClick={handleManualClose} style={closeButtonStyle} onMouseOver={(e) => e.target.style.background = "#e68a00"} onMouseOut={(e) => e.target.style.background = PRIMARY_ORANGE} title="Fermer">X</button>
@@ -258,7 +392,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         {hasPrev && <button onClick={(e) => { e.stopPropagation(); onPrev(); }} style={{ ...navButtonStyle, left: "-80px" }} onMouseOver={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = BG_MAIN; }} onMouseOut={(e) => { e.currentTarget.style.background = PRIMARY_ORANGE; e.currentTarget.style.color = BG_MAIN; }} title="Carte precedente">&#10094;</button>}
         {hasNext && <button onClick={(e) => { e.stopPropagation(); onNext(); }} style={{ ...navButtonStyle, right: "-80px" }} onMouseOver={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = BG_MAIN; }} onMouseOut={(e) => { e.currentTarget.style.background = PRIMARY_ORANGE; e.currentTarget.style.color = BG_MAIN; }} title="Carte suivante">&#10095;</button>}
 
-        {/* COLONNE 1 : IMAGE (Fixe 300px) */}
+        {/* COLONNE 1 : IMAGE */}
         <div style={{ flex: "0 0 300px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", minHeight: "420px" }}>
           {imageLoading && imageUrl && (
             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
@@ -278,7 +412,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
           )}
         </div>
 
-        {/* COLONNE 2 : INFOS & TEXTE (Flexible) */}
+        {/* COLONNE 2 : INFOS & TEXTE */}
         <div style={{ flex: "1 1 350px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           
           <h2 style={{ margin: "0 0 10px 0", color: "var(--primary, #FF9800)", fontSize: "1.8rem", lineHeight: 1.2, opacity: (isFlipping || imageLoading) ? 0 : 1, transition: "opacity 0.15s", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -289,8 +423,35 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "5px", padding: "15px 0", borderTop: "1px solid var(--border, #eaeaea)", borderBottom: "1px solid var(--border, #eaeaea)", marginBottom: "15px", color: "var(--text-muted, #666)", fontSize: "0.95rem" }}>
-            <div><strong>Set :</strong> {card.set_name || "?"} ({card.set?.toUpperCase() || "?"} #{card.collector_number || "?"})</div>
-            <div><strong>Langue :</strong> {card.lang?.toUpperCase() || "EN"}</div>
+            
+            {/* LIGNE SET RENDUE CLIQUABLE */}
+            <div 
+                onClick={fetchReprints} 
+                style={{ cursor: "pointer", color: "var(--primary)", display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 0", transition: "opacity 0.2s" }}
+                onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                onMouseOut={e => e.currentTarget.style.opacity = 1}
+                title="Cliquez pour voir les autres éditions"
+            >
+                <span>
+                    <strong style={{ color: "var(--text-muted)" }}>Set : </strong> 
+                    <span style={{ textDecoration: "underline" }}>{card.set_name || "?"} ({card.set?.toUpperCase() || "?"} #{card.collector_number || "?"})</span>
+                </span>
+            </div>
+
+            {/* GALERIE D'IMPRESSIONS */}
+            {showReprints && (
+                <div style={{ marginTop: "10px", padding: "12px", background: "var(--bg-input)", borderRadius: "8px", overflowX: "auto", display: "flex", gap: "15px", border: "1px solid var(--border)" }}>
+                    {loadingReprints ? <div style={{ padding: "10px", textAlign: "center", width: "100%" }}>Recherche des versions...</div> :
+                     reprints.map(rp => (
+                        <div key={rp.id} onClick={() => handleSwap(rp)} style={{ cursor: "pointer", minWidth: "100px", maxWidth: "100px", textAlign: "center", border: rp.id === card.id ? "2px solid var(--primary)" : "2px solid transparent", borderRadius: "8px", transition: "transform 0.2s", padding: "4px" }} onMouseOver={e=>e.currentTarget.style.transform="scale(1.05)"} onMouseOut={e=>e.currentTarget.style.transform="scale(1)"} title={`Basculer sur l'edition ${rp.set.toUpperCase()}`}>
+                           <img src={rp.image_normal || rp.image_border_crop || DEFAULT_CARD_BACK} style={{ width: "100%", borderRadius: "5%" }} alt={rp.set} />
+                           <div style={{ fontSize: "0.8rem", marginTop: "5px", color: rp.id === card.id ? "var(--primary)" : "var(--text-main)", fontWeight: rp.id === card.id ? "bold" : "normal" }}>{rp.set.toUpperCase()} #{rp.collector_number}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div style={{ marginTop: "5px" }}><strong>Langue :</strong> {card.lang?.toUpperCase() || "EN"}</div>
             <div><strong>Prix estimé :</strong> <span style={{ fontSize: "1.1rem", marginLeft: "5px" }}>{renderPrice()}</span></div>
           </div>
 
@@ -300,10 +461,9 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
 
         </div>
 
-        {/* COLONNE 3 : ACTIONS (Fixe 280px) */}
+        {/* COLONNE 3 : ACTIONS */}
         <div style={{ flex: "0 0 280px", display: "flex", flexDirection: "column", gap: "25px", borderLeft: "1px solid var(--border)", paddingLeft: "25px" }}>
           
-          {/* Bloc Achat */}
           {card.purchase_uris && (Object.keys(card.purchase_uris).length > 0) && (
               <div>
                   <h4 style={{ margin: "0 0 10px 0", color: "var(--text-main)", fontSize: "1.1rem" }}>Acheter</h4>
@@ -315,10 +475,56 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
               </div>
           )}
 
-          {/* Bloc Contexte Deck */}
+          <div style={{ marginTop: "10px", paddingTop: "15px", borderTop: "1px solid var(--border)" }}>
+              <span style={{ display: "block", marginBottom: "10px", fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "bold", textTransform: "uppercase" }}>
+                  Tags appliqués
+              </span>
+              
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                  {card.tags && card.tags.length > 0 ? card.tags.map((tag, index) => {
+                      const currentTagColor = tagColors[tag.toLowerCase()] || "var(--primary)"; // NOUVEAU
+                      return (
+                          <div key={index} style={{
+                              background: "var(--bg-input)",
+                              color: currentTagColor, // NOUVEAU
+                              border: `1px solid ${currentTagColor}`, // NOUVEAU
+                              padding: "4px 8px 4px 12px",
+                              borderRadius: "15px",
+                              fontSize: "0.8rem",
+                              fontWeight: "bold",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px"
+                          }}>
+                              {tag}
+                              <button onClick={() => handleRemoveTag(tag)} style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontWeight: "bold", padding: "0 4px", fontSize: "0.9rem" }} title="Supprimer ce tag">✕</button>
+                          </div>
+                      );
+                  }) : (
+                      <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic" }}>Aucun tag.</div>
+                  )}
+              </div>
+
+              <form onSubmit={handleAddTag} style={{ display: "flex", gap: "8px" }}>
+                  <input 
+                      type="text" 
+                      list="modal-available-tags"
+                      value={newTag} 
+                      onChange={(e) => setNewTag(e.target.value)} 
+                      placeholder="Ajouter un tag..." 
+                      style={{ flex: 1, padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)", fontSize: "0.85rem", boxSizing: "border-box" }} 
+                  />
+                  <button type="submit" disabled={!newTag.trim() || isTagging} className="btn-primary" style={{ padding: "8px 12px", borderRadius: "4px", fontSize: "1rem", fontWeight: "bold" }}>
+                      +
+                  </button>
+              </form>
+          </div>
+
           {deckContext && (
             <div>
-                <h4 style={{ margin: "0 0 10px 0", color: "var(--primary)", fontSize: "1.1rem" }}>Gestion du Deck</h4>
+                <h4 style={{ margin: "0 0 10px 0", color: "var(--primary)", fontSize: "1.1rem", paddingTop: "15px", borderTop: "1px solid var(--border)" }}>Gestion du Deck</h4>
                 <div style={{ padding: "15px", background: "rgba(255, 152, 0, 0.05)", border: "1px solid var(--primary)", borderRadius: "8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                         <div style={{ display: "flex", flexDirection: "column" }}>
@@ -340,7 +546,6 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
             </div>
           )}
 
-          {/* Bloc Collection */}
           <div style={{ marginTop: "auto" }}>
               <h4 style={{ margin: "0 0 10px 0", color: "var(--text-main)", fontSize: "1.1rem", paddingTop: "15px", borderTop: "1px solid var(--border)" }}>Collection</h4>
               
@@ -349,14 +554,14 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
                   
                   {isEditing ? (
                     <div style={{ display: "flex", gap: 5 }}>
-                        <input type="number" min="0" value={editCount} onChange={(e) => setEditCount(parseInt(e.target.value) || 0)} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
+                        <input type="number" min="0" value={editCount} onChange={(e) => setEditCount(parseInt(e.target.value) || 0)} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} />
                         <button onClick={handleUpdateCount} className="btn-primary" style={{ padding: "8px 12px", borderRadius: "4px" }}>OK</button>
                         <button onClick={() => setIsEditing(false)} className="btn-secondary" style={{ padding: "8px 12px", borderRadius: "4px" }}>X</button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-input)", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border)" }}>
                         <span style={{ fontWeight: "bold", fontSize: "1.1rem", color: "var(--text-main)" }}>x{defaultCount !== undefined ? defaultCount : (card.count || 0)}</span>
-                        <button onClick={() => setIsEditing(true)} style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", textDecoration: "underline", fontSize: "0.85rem" }}>Modifier</button>
+                        <button onClick={() => setIsEditing(true)} style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", textDecoration: "underline", fontSize: "0.85rem", padding: 0 }}>Modifier</button>
                     </div>
                   )}
               </div>
