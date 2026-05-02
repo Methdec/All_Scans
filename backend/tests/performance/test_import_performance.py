@@ -44,11 +44,11 @@ def test_parsing_performance(raw_text):
     C'est du CPU pur, ça doit être instantané.
     """
     # Importation locale pour éviter les problèmes circulaires
-    from routes.user_card_routes import parse_import_line
+    from utils.import_parser import parse_mtg_line
     
     start_time = time.time()
     for _ in range(1000): # On le fait 1000 fois pour que ce soit mesurable
-        parse_import_line(raw_text)
+        parse_mtg_line(raw_text)
     duration = time.time() - start_time
     
     print(f"   -> 1000x '{raw_text}': {duration:.4f}s")
