@@ -90,8 +90,8 @@ def login_user(response: Response, data: dict = Body(...)):
         key="session_token",
         value=token,
         httponly=True,
-        samesite="none",
-        secure=True, 
+        samesite="lax",
+        secure=False, 
     )
 
     return {"message": "Connexion reussie", "requires_mfa": False, "user": {"id": str(user["_id"]), "nom": user["nom"], "avatar": user.get("avatar")}}

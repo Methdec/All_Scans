@@ -4,6 +4,7 @@ import "../theme.css";
 import CardGrid from "./CardGrid";
 import CardSearchDetailModal from "./CardSearchDetailModal";
 import Loader from "./Loader"; 
+import { API_BASE_URL } from '../utils/api';
 
 const MANA_SYMBOLS = {
   W: "https://svgs.scryfall.io/card-symbols/W.svg",

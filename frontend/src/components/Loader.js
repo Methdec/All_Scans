@@ -1,5 +1,6 @@
 // src/components/Loader.js
 import React from "react";
+import { API_BASE_URL } from '../utils/api';
 
 export default function Loader() {
   return (

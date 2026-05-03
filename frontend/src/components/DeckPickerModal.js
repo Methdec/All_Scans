@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 export default function DeckPickerModal({ onClose, onSelect }) {
   const [items, setItems] = useState([]);
@@ -7,7 +8,7 @@ export default function DeckPickerModal({ onClose, onSelect }) {
 
   // Charger la liste des decks au montage
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/items/all_lists_and_decks", { credentials: "include" })
+    fetch(`${API_BASE_URL}/items/all_lists_and_decks`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         // On ne garde que les decks (pas les listes si tu en as, ou les dossiers)

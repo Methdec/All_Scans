@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import "../theme.css"; 
 import { DECK_FORMATS } from "../utils/deckRules";
 import Loader from "./Loader";
+import { API_BASE_URL } from '../utils/api';
 
 export default function ItemsPage() {
   const [items, setItems] = useState([]);
@@ -38,8 +39,8 @@ export default function ItemsPage() {
   const fetchItems = useCallback(async () => {
     try {
       const url = currentFolderId
-        ? `http://127.0.0.1:8000/items?parent_id=${currentFolderId}`
-        : "http://127.0.0.1:8000/items";
+        ? `${API_BASE_URL}/items?parent_id=${currentFolderId}`
+        : `${API_BASE_URL}/items`;
         
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Erreur chargement");
@@ -54,7 +55,7 @@ export default function ItemsPage() {
           return;
       }
       try {
-          const res = await fetch(`http://127.0.0.1:8000/items/path/${currentFolderId}`, { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/items/path/${currentFolderId}`, { credentials: "include" });
           if(res.ok) {
               const data = await res.json();
               setPath(data.path || []);
@@ -64,7 +65,7 @@ export default function ItemsPage() {
 
   const fetchAllFolders = useCallback(async () => {
       try {
-          const res = await fetch("http://127.0.0.1:8000/items/folders/all", { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/items/folders/all`, { credentials: "include" });
           if (res.ok) {
               const data = await res.json();
               setAllFolders(data.folders || []);
@@ -117,7 +118,7 @@ export default function ItemsPage() {
         parent_id: currentFolderId,
         ...(newItem.type === "deck" && { format: newItem.format })
       };
-      await fetch("http://127.0.0.1:8000/items", {
+      await fetch(`${API_BASE_URL}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -139,7 +140,7 @@ export default function ItemsPage() {
 
   const handleDeleteItem = async () => {
     try {
-      await fetch(`http://127.0.0.1:8000/items/${itemToDelete.id}`, {
+      await fetch(`${API_BASE_URL}/items/${itemToDelete.id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -174,7 +175,7 @@ export default function ItemsPage() {
 
       try {
           for (const id of selectedItems) {
-              const res = await fetch(`http://127.0.0.1:8000/items/${id}`, {
+              const res = await fetch(`${API_BASE_URL}/items/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   credentials: "include",
@@ -208,7 +209,7 @@ export default function ItemsPage() {
   const executeBulkDelete = async () => {
       try {
           for (const id of selectedItems) {
-              await fetch(`http://127.0.0.1:8000/items/${id}`, {
+              await fetch(`${API_BASE_URL}/items/${id}`, {
                   method: "DELETE",
                   credentials: "include",
               });
@@ -254,7 +255,7 @@ export default function ItemsPage() {
               parent_id: currentFolderId
           };
           
-          const res = await fetch("http://127.0.0.1:8000/items/import_deck", {
+          const res = await fetch(`${API_BASE_URL}/items/import_deck`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",

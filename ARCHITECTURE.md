@@ -19,7 +19,7 @@
                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    BACKEND (FastAPI)                            │
-│              http://127.0.0.1:8000                              │
+│              http://192.168.1.37:8000                              │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  API GATEWAY & MIDDLEWARE                                 │  │
 │  │  - CORS Middleware (Localhost:3000)                       │  │
@@ -74,7 +74,7 @@
 ```javascript
 // frontend/src/components/LoginPage.js
 const handleLogin = async (email, password) => {
-  const response = await fetch('http://127.0.0.1:8000/auth/login', {
+  const response = await fetch('http://192.168.1.37:8000/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -124,7 +124,7 @@ async def login(request: LoginRequest):
 // frontend/src/components/CardGrid.js
 useEffect(() => {
   const fetchCards = async () => {
-    const response = await fetch('http://127.0.0.1:8000/cards?skip=0&limit=20', {
+    const response = await fetch('http://192.168.1.37:8000/cards?skip=0&limit=20', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -180,7 +180,7 @@ async def get_cards(
 ```javascript
 // frontend/src/components/CardDetails.js
 const handleAddToCollection = async (cardId) => {
-  const response = await fetch('http://127.0.0.1:8000/user-cards', {
+  const response = await fetch('http://192.168.1.37:8000/user-cards', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -329,7 +329,7 @@ All_Scans/
 ### **Étape 1: Frontend envoie la requête**
 ```javascript
 const createCard = async (cardData) => {
-  const response = await fetch('http://127.0.0.1:8000/cards', {
+  const response = await fetch('http://192.168.1.37:8000/cards', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -437,7 +437,7 @@ Items
 
 ```bash
 # 1. Login
-curl -X POST http://127.0.0.1:8000/auth/login \
+curl -X POST http://192.168.1.37:8000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "mypass123"}'
 
@@ -445,11 +445,11 @@ curl -X POST http://127.0.0.1:8000/auth/login \
 # {"access_token": "eyJ0eX...", "token_type": "bearer"}
 
 # 2. Récupérer les cartes avec le token
-curl -X GET http://127.0.0.1:8000/cards?skip=0&limit=10 \
+curl -X GET http://192.168.1.37:8000/cards?skip=0&limit=10 \
   -H "Authorization: Bearer eyJ0eX..."
 
 # 3. Ajouter une carte à la collection
-curl -X POST http://127.0.0.1:8000/user-cards \
+curl -X POST http://192.168.1.37:8000/user-cards \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJ0eX..." \
   -d '{"card_id": "65c123abc...", "quantity": 1}'

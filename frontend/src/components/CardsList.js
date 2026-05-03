@@ -4,6 +4,7 @@ import ImportModal from "./ImportModal";
 import CollectionManager from "./CollectionManager";
 import TagsManager from "./TagsManager";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const MANA_SYMBOLS = {
   W: "https://svgs.scryfall.io/card-symbols/W.svg",
@@ -95,7 +96,7 @@ export default function CardsList() {
 
   const fetchAvailableTags = async () => {
       try {
-          const res = await fetch("http://127.0.0.1:8000/me/collection/tags", { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/me/collection/tags`, { credentials: "include" });
           if (res.ok) {
               const data = await res.json();
               setAvailableTags(data.tags || []);
@@ -108,7 +109,7 @@ export default function CardsList() {
   // NOUVEAU : Fonction pour récupérer les couleurs des tags
   const fetchTagRulesColors = async () => {
       try {
-          const res = await fetch("http://127.0.0.1:8000/tags/rules", { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/tags/rules`, { credentials: "include" });
           if (res.ok) {
               const data = await res.json();
               const colorMap = {};
@@ -132,7 +133,7 @@ export default function CardsList() {
       const loadSets = async () => {
           setLoading(true);
           try {
-              const res = await fetch(`http://127.0.0.1:8000/cards/collection/sets?sort_dir=${sortDir}`, { credentials: "include" });
+              const res = await fetch(`${API_BASE_URL}/cards/collection/sets?sort_dir=${sortDir}`, { credentials: "include" });
               if (res.ok) {
                   const data = await res.json();
                   setUserSets(data.sets || []);
@@ -147,7 +148,7 @@ export default function CardsList() {
       const loadTagsSummary = async () => {
           setLoading(true);
           try {
-              const res = await fetch(`http://127.0.0.1:8000/cards/collection/tags_summary?sort_dir=${sortDir}`, { credentials: "include" });
+              const res = await fetch(`${API_BASE_URL}/cards/collection/tags_summary?sort_dir=${sortDir}`, { credentials: "include" });
               if (res.ok) {
                   const data = await res.json();
                   setTagsSummary(data.tags_summary || []);
@@ -218,7 +219,7 @@ export default function CardsList() {
       params.append("sort_by", sortBy); 
       params.append("sort_dir", sortDir);
 
-      const endpoint = `http://127.0.0.1:8000/cards/search?${params.toString()}`;
+      const endpoint = `${API_BASE_URL}/cards/search?${params.toString()}`;
 
       const res = await fetch(endpoint, { 
           credentials: "include",

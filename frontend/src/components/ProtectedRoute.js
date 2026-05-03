@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { API_BASE_URL } from '../utils/api';
 
 function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
@@ -8,7 +9,8 @@ function ProtectedRoute({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/auth/me", {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: "GET",
           credentials: "include",
         });
         setIsAuthenticated(response.ok);

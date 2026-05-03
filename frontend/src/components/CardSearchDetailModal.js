@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../theme.css";
 import Loader from "./Loader";
+import { API_BASE_URL } from '../utils/api';
 
 const PRIMARY_ORANGE = "#FF9800";
 const BG_MAIN = "#121212"; 
@@ -31,7 +32,7 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
       setIsFlipped(false);
       setError("");
       try {
-        const res = await fetch(`http://127.0.0.1:8000/cards/${cardId}`, { credentials: "include" });
+        const res = await fetch(`${API_BASE_URL}/cards/${cardId}`, { credentials: "include" });
         if (!res.ok) throw new Error("Impossible de charger la carte");
         const data = await res.json();
         if (!cancelled) setFetchedCard(data);

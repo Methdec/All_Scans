@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthBackground from "./AuthBackground";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 export default function LoginPage() {
   // Etape 1: Identifiants
@@ -23,7 +24,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -62,7 +63,7 @@ export default function LoginPage() {
       setLoading(true);
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/auth/login/mfa", {
+        const res = await fetch(`${API_BASE_URL}/auth/login/mfa`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

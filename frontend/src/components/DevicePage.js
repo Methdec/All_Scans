@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 export default function DevicePage() {
   const [isConnected, setIsConnected] = useState(false);

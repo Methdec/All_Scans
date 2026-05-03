@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const TYPE_PRIORITY = [
   "Creature", "Planeswalker", "Instant", "Sorcery", 
@@ -61,7 +62,7 @@ export default function CollectionManager() {
   const fetchHistory = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/history?_t=${Date.now()}`, {
+      const response = await fetch(`${API_BASE_URL}/history?_t=${Date.now()}`, {
         method: "GET", credentials: "include", headers: { "Cache-Control": "no-cache" }
       });
       if (response.ok) {
@@ -116,7 +117,7 @@ export default function CollectionManager() {
 
     if (type === "clear") {
       try {
-        const response = await fetch("http://127.0.0.1:8000/history", { method: "DELETE", credentials: "include" });
+        const response = await fetch(`${API_BASE_URL}/history`, { method: "DELETE", credentials: "include" });
         if (response.ok) {
           setHistory([]);
           setActionModal(prev => ({ ...prev, status: "success", message: "Historique effacé avec succès." }));
@@ -126,7 +127,7 @@ export default function CollectionManager() {
     } 
     else if (type === "revert") {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/history/${id}/revert`, { method: "POST", credentials: "include" });
+        const response = await fetch(`${API_BASE_URL}/history/${id}/revert`, { method: "POST", credentials: "include" });
         if (response.ok) {
           const data = await response.json();
           setActionModal(prev => ({ ...prev, status: "success", message: data.message || "Import annulé avec succès." }));
@@ -144,7 +145,7 @@ export default function CollectionManager() {
   const handleOpenRecap = async (logId) => {
       setRecapModalData({ _loading: true }); 
       try {
-          const res = await fetch(`http://127.0.0.1:8000/history/${logId}/recap`, { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/history/${logId}/recap`, { credentials: "include" });
           if (res.ok) {
               const data = await res.json();
               setRecapModalData(data);
@@ -250,7 +251,7 @@ export default function CollectionManager() {
   const executeServerImport = async (parsedData, linesCount) => {
     setImportPhase("db");
     try {
-        const res = await fetch("http://127.0.0.1:8000/usercards/import", {
+        const res = await fetch(`${API_BASE_URL}/usercards/import`, {
             method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(parsedData),
         });
         if (!res.ok) throw new Error("Erreur interne du serveur.");
@@ -258,7 +259,7 @@ export default function CollectionManager() {
         let errorsCount = 0;
         const interval = setInterval(async () => {
             try {
-                const progRes = await fetch(`http://127.0.0.1:8000/usercards/import/progress?_t=${Date.now()}`, { method: "GET", credentials: "include" });
+                const progRes = await fetch(`${API_BASE_URL}/usercards/import/progress?_t=${Date.now()}`, { method: "GET", credentials: "include" });
                 if (progRes.ok) {
                     const data = await progRes.json();
                     if (data.status === "starting" || data.status === "processing") {
@@ -294,7 +295,7 @@ export default function CollectionManager() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/usercards/export?format=${exportFormat}`, { method: "GET", credentials: "include" });
+      const response = await fetch(`${API_BASE_URL}/usercards/export?format=${exportFormat}`, { method: "GET", credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors de l'exportation");
 
       const disposition = response.headers.get('Content-Disposition');

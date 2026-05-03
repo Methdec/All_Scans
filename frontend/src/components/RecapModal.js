@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const TYPE_PRIORITY = [
   "Creature", "Planeswalker", "Instant", "Sorcery", 

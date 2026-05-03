@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthBackground from "./AuthBackground";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 export default function RegisterPage() {
   const [nom, setNom] = useState("");
@@ -18,7 +19,7 @@ export default function RegisterPage() {
     console.log("Data envoyée :", { nom, email, password });
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/register", {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

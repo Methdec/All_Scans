@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../utils/api';
 
 const FORMATS = ["standard", "commander", "modern", "pioneer", "legacy", "vintage", "pauper"];
 
@@ -34,7 +35,7 @@ export default function DeckSettings({ deck, onUpdate }) {
     const [duplicateData, setDuplicateData] = useState({ new_name: `Copie - ${deck.nom}`, parent_id: "" });
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/items/folders/all", { credentials: "include" })
+        fetch(`${API_BASE_URL}/items/folders/all`, { credentials: "include" })
             .then(res => res.json())
             .then(data => setFolders(data.folders || []))
             .catch(err => console.error(err));
@@ -44,7 +45,7 @@ export default function DeckSettings({ deck, onUpdate }) {
 
     const handleEdit = async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}`, {
+            const res = await fetch(`${API_BASE_URL}/items/${deck.id}`, {
                 method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include",
                 body: JSON.stringify(editData)
             });
@@ -63,7 +64,7 @@ export default function DeckSettings({ deck, onUpdate }) {
 
     const handleMove = async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}`, {
+            const res = await fetch(`${API_BASE_URL}/items/${deck.id}`, {
                 method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include",
                 body: JSON.stringify({ parent_id: moveData.parent_id || null })
             });
@@ -95,7 +96,7 @@ export default function DeckSettings({ deck, onUpdate }) {
     const executeToggleConstruction = async (newState) => {
         closeInfoModal();
         try {
-            const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}`, {
+            const res = await fetch(`${API_BASE_URL}/items/${deck.id}`, {
                 method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include",
                 body: JSON.stringify({ is_constructed: newState })
             });
@@ -115,7 +116,7 @@ export default function DeckSettings({ deck, onUpdate }) {
 
     const handleDuplicate = async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}/duplicate`, {
+            const res = await fetch(`${API_BASE_URL}/items/${deck.id}/duplicate`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
                 body: JSON.stringify({ new_name: duplicateData.new_name, parent_id: duplicateData.parent_id || null })
             });
@@ -129,7 +130,7 @@ export default function DeckSettings({ deck, onUpdate }) {
     const handleDelete = async () => {
         if (deleteConfirmation !== deck.nom) return;
         try {
-            const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}`, { method: "DELETE", credentials: "include" });
+            const res = await fetch(`${API_BASE_URL}/items/${deck.id}`, { method: "DELETE", credentials: "include" });
             if (res.ok) { 
                 // --- NOUVEAU : Ferme l'onglet automatiquement à la suppression ---
                 const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");

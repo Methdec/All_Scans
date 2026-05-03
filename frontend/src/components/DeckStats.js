@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend, CartesianGrid 
 } from 'recharts';
+import { API_BASE_URL } from '../utils/api';
 
 const CHART_COLORS = {
     White: "#F0E6BC", Blue: "#42a5f5", Black: "#5e5e5e", 
@@ -81,7 +82,7 @@ export default function DeckStats({ deck, onUpdate }) {
     closeInfoModal();
     setLoadingLands(true);
     try {
-        const res = await fetch(`http://127.0.0.1:8000/items/${deck.id}/auto_balance_lands`, {
+        const res = await fetch(`${API_BASE_URL}/items/${deck.id}/auto_balance_lands`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include"

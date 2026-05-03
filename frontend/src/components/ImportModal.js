@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../theme.css"; 
+import { API_BASE_URL } from '../utils/api';
 
 export default function ImportModal({ onClose, onImportComplete }) {
   const [file, setFile] = useState(null);
@@ -40,7 +41,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
     });
 
     try {
-        const res = await fetch("http://127.0.0.1:8000/usercards/import", {
+        const res = await fetch(`${API_BASE_URL}/usercards/import`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -53,7 +54,7 @@ export default function ImportModal({ onClose, onImportComplete }) {
         let errorsCount = 0;
         const interval = setInterval(async () => {
             try {
-                const progRes = await fetch("http://127.0.0.1:8000/usercards/import/progress", {
+                const progRes = await fetch(`${API_BASE_URL}/usercards/import/progress`, {
                     method: "GET",
                     credentials: "include"
                 });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate } from "react-router-dom";
 import "./App.css";
 import "./theme.css"; 
+import { API_BASE_URL } from './utils/api';
 
 import CardsList from "./components/CardsList";
 import CardSearchBar from "./components/CardSearchBar";
@@ -34,7 +35,7 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/auth/me", {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
           credentials: "include",
         });
         if (response.ok) {
@@ -64,7 +65,7 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch("http://127.0.0.1:8000/auth/logout", {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

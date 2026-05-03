@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Loader from "./Loader"; 
 import "../theme.css"; 
+import { API_BASE_URL } from '../utils/api';
 
 const PRIMARY_ORANGE = "#FF9800";
 const BG_MAIN = "#121212"; 
@@ -18,7 +19,7 @@ function DeckPickerModal({ onClose, onSelect }) {
   useEffect(() => {
     const fetchDecks = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/items/all_lists_and_decks", { credentials: "include" });
+        const res = await fetch(`${API_BASE_URL}/items/all_lists_and_decks`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           setDecks(data.items || []);
@@ -33,7 +34,7 @@ function DeckPickerModal({ onClose, onSelect }) {
     if (!newDeckName.trim()) return;
     setIsCreating(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/items", {
+      const res = await fetch("${API_BASE_URL}/items", {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ nom: newDeckName, type: "deck", format: newDeckFormat, parent_id: null })
       });
@@ -130,7 +131,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         if (isFoil === true) foilQuery = "?is_foil=true";
         else if (isFoil === false) foilQuery = "?is_foil=false";
 
-        const cardRes = await fetch(`http://127.0.0.1:8000/cards/${cardId}${foilQuery}`, { credentials: "include" });
+        const cardRes = await fetch(`${API_BASE_URL}/cards/${cardId}${foilQuery}`, { credentials: "include" });
         if (!cardRes.ok) {
             const errData = await cardRes.json().catch(() => ({}));
             let errorMessage = errData.detail || "Impossible de charger la carte.";
@@ -169,7 +170,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const handleAddToDeck = async (deckId) => {
     setShowDeckPicker(false);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/items/${deckId}/add_card`, {
+      const res = await fetch(`${API_BASE_URL}/items/${deckId}/add_card`, {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ card_id: card?.id || card?._id || cardId, is_sideboard: false }),
       });
@@ -186,7 +187,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const handleUpdateCount = async () => {
     if (editCount < 0) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/usercards/${cardId}`, {
+      const res = await fetch(`${API_BASE_URL}/usercards/${cardId}`, {
         method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: editCount, is_foil: !!isFoil }),
       });
@@ -202,7 +203,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   useEffect(() => {
       const loadTags = async () => {
           try {
-              const res = await fetch("http://127.0.0.1:8000/me/collection/tags", { credentials: "include" });
+              const res = await fetch(`${API_BASE_URL}/me/collection/tags`, { credentials: "include" });
               if (res.ok) {
                   const data = await res.json();
                   setAvailableTags(data.tags || []);
@@ -218,7 +219,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       setIsTagging(true);
       
       try {
-          const res = await fetch(`http://127.0.0.1:8000/${cardId}/tags`, {
+          const res = await fetch(`${API_BASE_URL}/${cardId}/tags`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -244,7 +245,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
 
   const handleRemoveTag = async (tagToRemove) => {
       try {
-          const res = await fetch(`http://127.0.0.1:8000/${cardId}/tags?tag=${encodeURIComponent(tagToRemove)}`, {
+          const res = await fetch(`${API_BASE_URL}/${cardId}/tags?tag=${encodeURIComponent(tagToRemove)}`, {
               method: "DELETE",
               credentials: "include"
           });
@@ -272,7 +273,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
     setShowReprints(true);
     setLoadingReprints(true);
     try {
-       const res = await fetch(`http://127.0.0.1:8000/cards/prints/${card.oracle_id}`, { credentials: "include" });
+       const res = await fetch(`${API_BASE_URL}/cards/prints/${card.oracle_id}`, { credentials: "include" });
        if (res.ok) {
           const data = await res.json();
           setReprints(data.prints || []);
@@ -298,7 +299,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
        let swapQty = isEditing ? parseInt(editCount) || 1 : 1;
        if (swapQty <= 0) return;
 
-       const res = await fetch(`http://127.0.0.1:8000/usercards/${card.id}/swap`, {
+       const res = await fetch(`${API_BASE_URL}/usercards/${card.id}/swap`, {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           credentials: "include",

@@ -1,5 +1,6 @@
 import React from "react";
 import "../App.css";
+import { API_BASE_URL } from '../utils/api';
 
 /**
  * Composant réutilisable pour afficher une grille de cartes

@@ -228,7 +228,7 @@ Cas 2: localhost:3000 (ton frontend autorisé)
 ┌─────────────────────────────────────────┐
 │ Frontend: localhost:3000 (Autorisé ✅)   │
 │                                         │
-│ fetch('http://127.0.0.1:8000/auth/...')│
+│ fetch('${API_BASE_URL}/auth/...')│
 │              ↓                          │
 │ CORS Middleware                         │
 │  → Vérifie: allow_origins               │
@@ -239,7 +239,7 @@ Cas 2: localhost:3000 (ton frontend autorisé)
 ┌─────────────────────────────────────────┐
 │ Site malveillant: evil.com (Bloqué ❌)  │
 │                                         │
-│ fetch('http://127.0.0.1:8000/auth/...')│
+│ fetch('${API_BASE_URL}/auth/...')│
 │              ↓                          │
 │ CORS Middleware                         │
 │  → Vérifie: allow_origins               │
@@ -373,7 +373,7 @@ db.users.find_one({"email": email})
 
 ```bash
 # Tentative d'injection
-curl -X POST http://127.0.0.1:8000/auth/login \
+curl -X POST ${API_BASE_URL}/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": {"$ne": null}, "password": "anything"}'
 
@@ -396,7 +396,7 @@ email = data.get("email")  # ✅ Doit être un string
 
 ```bash
 # Tentative d'injection
-curl -X GET "http://127.0.0.1:8000/items/'; DROP TABLE users; --" \
+curl -X GET `${API_BASE_URL}/items/'; DROP TABLE users; --" \
   -H "Authorization: Bearer token..."
 
 # Route:

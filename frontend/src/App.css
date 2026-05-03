@@ -297,3 +297,122 @@
   border-color: #00aaff;
   box-shadow: 0 0 12px rgba(0, 170, 255, 0.6);
 }
+
+
+/* =========================================
+   AUTH BACKGROUND
+   ========================================= */
+.auth-background {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  /* DÉGRADÉ : Centre gris-brun sombre, Extérieur noir pur */
+  background: radial-gradient(circle at center, #2c1e10 0%, #121212 60%, #000000 100%);
+}
+
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: 0;
+  pointer-events: none; /* Empêche le filtre de bloquer les clics */
+}
+
+.floating-card {
+  position: absolute;
+  background-size: cover;
+  background-position: center;
+  border-radius: 4.75% / 3.5%;
+  z-index: 1;
+}
+
+/* =========================================
+   CARD GRID & ITEMS
+   ========================================= */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.card-item {
+  background-color: var(--bg-input, #1e1e1e);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+/* Remplacement du onMouseEnter/onMouseLeave JS par du CSS pur ! */
+.card-item.clickable {
+  cursor: pointer;
+}
+
+.card-item.clickable:hover {
+  border-color: var(--primary, #FF9800);
+  transform: translateY(-4px);
+}
+
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.card-img {
+  width: 100%;
+  height: auto;
+  border-radius: 4.75% / 3.5%;
+  display: block;
+}
+
+.card-no-image {
+  width: 100%;
+  aspect-ratio: 2.5/3.5;
+  background-color: #333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.card-info-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.card-name {
+  font-weight: bold;
+  color: var(--text-main, #fff);
+  font-size: 0.95rem;
+  text-align: center;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-bottom-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-set-name {
+  color: var(--text-muted, #aaa);
+  font-size: 0.8rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}

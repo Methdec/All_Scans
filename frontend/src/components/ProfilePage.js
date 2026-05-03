@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { QRCodeCanvas } from "qrcode.react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const createImage = (url) =>
   new Promise((resolve, reject) => {
@@ -128,7 +129,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     try {
       const croppedBase64 = await getCroppedImg(imageToCrop, croppedAreaPixels);
       
-      const res = await fetch("http://127.0.0.1:8000/auth/me/avatar", {
+      const res = await fetch(`${API_BASE_URL}/auth/me/avatar`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -152,7 +153,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleUpdateNom = async (e) => {
       e.preventDefault();
       try {
-        const res = await fetch("http://127.0.0.1:8000/auth/me/nom", {
+        const res = await fetch(`${API_BASE_URL}/auth/me/nom`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -174,7 +175,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleUpdateEmail = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/me/email", {
+      const res = await fetch(`${API_BASE_URL}/auth/me/email`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -201,7 +202,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/me/password", {
+      const res = await fetch(`${API_BASE_URL}/auth/me/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -230,7 +231,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     setTotalCards(0);
     
     try {
-        const resIds = await fetch("http://127.0.0.1:8000/auth/me/collection/ids", { credentials: "include" });
+        const resIds = await fetch(`${API_BASE_URL}/auth/me/collection/ids`, { credentials: "include" });
         const dataIds = await resIds.json();
         
         if (!resIds.ok) throw new Error("Erreur de récupération des IDs");
@@ -250,7 +251,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         for (let i = 0; i < ids.length; i += chunkSize) {
             const chunk = ids.slice(i, i + chunkSize);
             
-            await fetch("http://127.0.0.1:8000/auth/me/collection/update/chunk", {
+            await fetch(`${API_BASE_URL}/auth/me/collection/update/chunk`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -262,7 +263,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
             setUpdateProgress(Math.min(100, Math.round((processed / ids.length) * 100)));
         }
 
-        await fetch("http://127.0.0.1:8000/auth/me/collection/update/log", {
+        await fetch(`${API_BASE_URL}/auth/me/collection/update/log`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -282,7 +283,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleDeleteCollection = async () => {
       if (deleteCollectionConfirm !== "SUPPRIMER") return;
       try {
-          const res = await fetch("http://127.0.0.1:8000/auth/me/collection", { method: "DELETE", credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/auth/me/collection`, { method: "DELETE", credentials: "include" });
           const data = await res.json();
           if (res.ok) {
               showNotification(data.message || "Collection vidée !");
@@ -296,7 +297,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleDeleteAccount = async () => {
       if (deleteAccountConfirm !== "SUPPRIMER") return;
       try {
-          const res = await fetch("http://127.0.0.1:8000/auth/me", { method: "DELETE", credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/auth/me`, { method: "DELETE", credentials: "include" });
           if (res.ok) {
               localStorage.removeItem("openDecks");
               window.location.href = "/login";
@@ -310,7 +311,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   // --- FONCTIONS MFA ---
   const handleInitiateMfa = async () => {
       try {
-          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/setup", { credentials: "include" });
+          const res = await fetch(`${API_BASE_URL}/auth/me/mfa/setup`, { credentials: "include" });
           const data = await res.json();
           if (res.ok) {
               setMfaSetupData(data);
@@ -326,7 +327,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleEnableMfa = async (e) => {
       e.preventDefault();
       try {
-          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/enable", {
+          const res = await fetch(`${API_BASE_URL}/auth/me/mfa/enable`, {
               method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
               body: JSON.stringify({ mfa_code: mfaCode })
           });
@@ -346,7 +347,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const handleDisableMfa = async (e) => {
       e.preventDefault();
       try {
-          const res = await fetch("http://127.0.0.1:8000/auth/me/mfa/disable", {
+          const res = await fetch(`${API_BASE_URL}/auth/me/mfa/disable`, {
               method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
               body: JSON.stringify({ password: mfaDisablePassword })
           });
@@ -542,7 +543,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                             const img = c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop;
                             if (!img) return null;
                             return (
-                            <div key={i} onClick={() => setImageToCrop(`http://127.0.0.1:8000/auth/proxy-image?url=${encodeURIComponent(img)}`)} style={{ cursor: "pointer" }}>
+                            <div key={i} onClick={() => setImageToCrop(`${API_BASE_URL}/auth/proxy-image?url=${encodeURIComponent(img)}`)} style={{ cursor: "pointer" }}>
                                 <img src={img} alt={c.name} title={c.name} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: "8px", border: "2px solid transparent", transition: "border 0.2s" }} onMouseOver={e => e.target.style.borderColor="var(--primary)"} onMouseOut={e => e.target.style.borderColor="transparent"} />
                                 <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
                             </div>

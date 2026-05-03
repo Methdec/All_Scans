@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const MANA_SYMBOLS = {
     W: "https://svgs.scryfall.io/card-symbols/W.svg",
@@ -25,7 +26,7 @@ export default function TagsManager({ onClose }) {
     const fetchRules = async () => {
         setLoading(true);
         try {
-            const res = await fetch("http://127.0.0.1:8000/tags/rules", { credentials: "include" });
+            const res = await fetch(`${API_BASE_URL}/tags/rules`, { credentials: "include" });
             if (res.ok) {
                 const data = await res.json();
                 setRules(data.rules || []);
@@ -139,8 +140,8 @@ export default function TagsManager({ onClose }) {
             };
 
             const url = editingRuleId 
-                ? `http://127.0.0.1:8000/tags/rules/${editingRuleId}` 
-                : "http://127.0.0.1:8000/tags/rules";
+                ? `${API_BASE_URL}/tags/rules/${editingRuleId}` 
+                : `${API_BASE_URL}/tags/rules`;
             
             const method = editingRuleId ? "PUT" : "POST";
 
@@ -167,7 +168,7 @@ export default function TagsManager({ onClose }) {
 
     const handleDeleteRule = async (ruleId) => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/tags/rules/${ruleId}`, {
+            const res = await fetch(`${API_BASE_URL}/tags/rules/${ruleId}`, {
                 method: "DELETE",
                 credentials: "include"
             });

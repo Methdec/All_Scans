@@ -6,6 +6,7 @@ import CardSearchDetailModal from "./CardSearchDetailModal";
 import DeckStats from "./DeckStats";
 import DeckSettings from "./DeckSettings";
 import "../theme.css";
+import { API_BASE_URL } from '../utils/api';
 
 const DEFAULT_CARD_BACK = "https://cards.scryfall.io/large/back/0/0.jpg";
 
@@ -35,7 +36,7 @@ export default function DeckDetail() {
 
   const fetchDeck = useCallback(async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/items/${id}`, { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/items/${id}`, { credentials: "include" });
       if (!res.ok) throw new Error("Deck introuvable");
       const data = await res.json();
       setDeck(data);
@@ -70,7 +71,7 @@ export default function DeckDetail() {
     e.stopPropagation(); 
     try {
         const endpoint = action === "add" ? "add_card" : "remove_card";
-        await fetch(`http://127.0.0.1:8000/items/${id}/${endpoint}`, {
+        await fetch(`${API_BASE_URL}/items/${id}/${endpoint}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -85,7 +86,7 @@ export default function DeckDetail() {
   const toggleBoard = async (e, cardId, isCurrentlySideboard) => {
       e.stopPropagation();
       try {
-          await fetch(`http://127.0.0.1:8000/items/${id}/toggle_board`, {
+          await fetch(`${API_BASE_URL}/items/${id}/toggle_board`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -100,7 +101,7 @@ export default function DeckDetail() {
   const toggleCommander = async (e, cardId, isCurrentlyCommander) => {
       e.stopPropagation();
       try {
-          await fetch(`http://127.0.0.1:8000/items/${id}/toggle_commander`, {
+          await fetch(`${API_BASE_URL}/items/${id}/toggle_commander`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -270,7 +271,7 @@ export default function DeckDetail() {
 
   const handleUpdateImage = async (imgUrl) => {
     try {
-        await fetch(`http://127.0.0.1:8000/items/${deck.id}`, {
+        await fetch(`${API_BASE_URL}/items/${deck.id}`, {
             method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include",
             body: JSON.stringify({ image: imgUrl })
         });

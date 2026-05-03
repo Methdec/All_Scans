@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../theme.css";
 // Image par défaut (fallback) au cas où le dossier cards est vide
 import backCardImg from "../assets/backCard.png";
+import { API_BASE_URL } from '../utils/api';
 
 // Fonction pour importer dynamiquement toutes les images d'un dossier
 // Cela fonctionne avec Webpack (Create React App)
