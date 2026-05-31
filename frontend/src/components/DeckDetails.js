@@ -113,23 +113,20 @@ export default function DeckDetail() {
       }
   };
 
-  // CORRECTION : Tri stricte selon la priorite de TYPE_PRIORITY
   const getCardCategory = (typeLine) => {
     if (!typeLine) return "Other";
     const ignored = ["legendary", "basic", "snow", "world", "tribal"];
-    // Separation avant le tiret (certains types Scryfall utilisent "—" ou "-")
     const mainTypeString = typeLine.split("—")[0].split("-")[0].trim();
     const types = mainTypeString.split(" ");
     
     let bestType = "Other";
-    let bestPriorityIndex = 999; // Valeur haute par defaut
+    let bestPriorityIndex = 999; 
 
     for (let t of types) {
         if (ignored.includes(t.toLowerCase())) continue;
         const cleanType = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
         
         const priorityIdx = TYPE_PRIORITY.indexOf(cleanType);
-        // Si le type existe dans notre liste et est prioritaire par rapport au precedent
         if (priorityIdx !== -1 && priorityIdx < bestPriorityIndex) {
             bestPriorityIndex = priorityIdx;
             bestType = cleanType;
@@ -246,7 +243,7 @@ export default function DeckDetail() {
     if (!cost) return "";
     const parts = cost.match(/\{[^}]+\}/g) || [];
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: "3px", flexWrap: "nowrap" }}>
+        <div className="dd-mana-cost">
             {parts.map((part, index) => {
                 const symbol = part.replace(/[{}]/g, "");
                 if (!isNaN(symbol) || symbol === "X") {
@@ -290,66 +287,51 @@ export default function DeckDetail() {
                                 card.type_line.toLowerCase().includes("legendary") && 
                                 card.type_line.toLowerCase().includes("creature");
 
-    // CORRECTION : Verification si cette carte precise a declenche une erreur dans validateDeck
     const isInvalid = validation && validation.invalidCardIds && validation.invalidCardIds.includes(card.card_id);
 
     return (
         <tr 
             key={idx} 
+            className={`dd-row ${isMissing ? 'missing' : ''} ${isInvalid ? 'invalid' : ''}`}
             onClick={() => setSelectedCard({ id: card.card_id, isMissing, isSideboard: card.is_sideboard, deckQuantity: card.quantity })} 
-            style={{ 
-                borderBottom: "1px solid rgba(255,255,255,0.05)", 
-                cursor: "pointer", 
-                opacity: isMissing ? 0.8 : 1,
-                backgroundColor: isInvalid ? "rgba(244, 67, 54, 0.1)" : "transparent",
-                borderLeft: isInvalid ? "3px solid var(--danger, #F44336)" : "none"
-            }}
         >
-            <td style={{ padding: "8px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: isMissing ? "var(--danger, #F44336)" : (isInvalid ? "var(--danger, #F44336)" : "inherit") }}>
+            <td className="dd-cell dd-cell-name" style={{ color: isMissing || isInvalid ? "var(--danger)" : "inherit" }}>
                 {card.name || "Carte Fantôme"}
                 {isMissing && (
-                    <span style={{ marginLeft: "8px", fontSize: "0.7rem", background: "var(--danger, #F44336)", color: "white", padding: "2px 6px", borderRadius: "4px" }}>
-                        Manque x{missingQty}
-                    </span>
+                    <span className="dd-missing-badge">Manque x{missingQty}</span>
                 )}
                 {isInvalid && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "8px", verticalAlign: "middle" }}>
+                    <svg className="dd-invalid-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                         <line x1="12" y1="9" x2="12" y2="13"></line>
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                     </svg>
                 )}
             </td>
-            <td style={{ padding: "8px", color: "var(--text-muted)", fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <td className="dd-cell dd-cell-type">
                 {card.type_line || "Inconnu"}
             </td>
-            <td style={{ padding: "8px" }}>
-                {typeKey === "Land" ? <span style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontStyle: "italic" }}>{card.set_name || "N/A"}</span> : renderManaCost(card.mana_cost)}
+            <td className="dd-cell">
+                {typeKey === "Land" ? <span className="dd-set-text">{card.set_name || "N/A"}</span> : renderManaCost(card.mana_cost)}
             </td>
-            <td style={{ padding: "8px", textAlign: "right" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
-                    
+            <td className="dd-cell dd-cell-actions">
+                <div className="dd-cell-actions">
                     {isCommanderFormat && isLegendaryCreature && (
                         <button 
                             onClick={(e) => toggleCommander(e, card.card_id, card.is_commander)} 
-                            className="btn-secondary" 
+                            className={`dd-btn-cmd ${card.is_commander ? 'active' : ''}`}
                             title={card.is_commander ? "Retirer du commandement" : "Désigner comme commandant"} 
-                            style={{ 
-                                padding: "0 5px", height: "24px", borderRadius: "4px", fontSize: "0.75rem", 
-                                borderColor: card.is_commander ? "var(--primary)" : "var(--border)",
-                                color: card.is_commander ? "var(--primary)" : "var(--text-muted)"
-                            }}
                         >
                             Cmd
                         </button>
                     )}
 
-                    <button onClick={(e) => updateQuantity(e, card.card_id, "remove", card.is_sideboard)} className="btn-secondary" style={{ padding: "0", width: "24px", height: "24px", borderRadius: "50%" }}>-</button>
-                    <span style={{ fontWeight: "bold", color: "var(--primary)", minWidth: "20px", textAlign: "center" }}>{card.quantity}</span>
-                    <button onClick={(e) => updateQuantity(e, card.card_id, "add", card.is_sideboard)} className="btn-secondary" style={{ padding: "0", width: "24px", height: "24px", borderRadius: "50%" }}>+</button>
+                    <button onClick={(e) => updateQuantity(e, card.card_id, "remove", card.is_sideboard)} className="dd-btn-circle">-</button>
+                    <span className="dd-qty-text">{card.quantity}</span>
+                    <button onClick={(e) => updateQuantity(e, card.card_id, "add", card.is_sideboard)} className="dd-btn-circle">+</button>
                     
                     {canToggleBoard && (
-                        <button onClick={(e) => toggleBoard(e, card.card_id, card.is_sideboard)} className="btn-secondary" title={card.is_sideboard ? "Déplacer vers le deck principal" : "Déplacer vers la réserve"} style={{ padding: "0", width: "24px", height: "24px", borderRadius: "4px", fontSize: "0.9rem", marginLeft: "5px" }}>
+                        <button onClick={(e) => toggleBoard(e, card.card_id, card.is_sideboard)} className="dd-btn-board" title={card.is_sideboard ? "Déplacer vers le deck principal" : "Déplacer vers la réserve"}>
                             ⇌
                         </button>
                     )}
@@ -359,43 +341,35 @@ export default function DeckDetail() {
     );
   };
 
-  const tabContainerStyle = { display: "flex", gap: "5px", marginTop: "30px", borderBottom: "2px solid var(--border)" };
-  const getTabStyle = (isActive) => ({
-      padding: "10px 20px", cursor: "pointer", borderTopLeftRadius: "8px", borderTopRightRadius: "8px",
-      background: isActive ? "var(--bg-main)" : "var(--bg-input)", color: isActive ? "var(--primary)" : "var(--text-muted)",
-      border: "1px solid var(--border)", borderBottom: isActive ? "1px solid var(--bg-main)" : "1px solid var(--border)", 
-      marginBottom: "-2px", fontWeight: isActive ? "bold" : "normal", fontSize: "1rem"
-  });
-
-  if (loading) return <div style={{padding: 20}}>Chargement...</div>;
+  if (loading) return <div className="p-20">Chargement...</div>;
   if (!deck) return null;
 
   return (
-    <div style={{ padding: "20px", maxWidth: 1000, margin: "0 auto" }}>
+    <div className="dd-container">
       
-      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+      <div className="dd-header">
         <img 
             src={deck.image || DEFAULT_CARD_BACK} alt="Cover" 
-            style={{ width: 150, height: 200, objectFit: "cover", borderRadius: "var(--radius)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", cursor: "pointer" }}
+            className="dd-cover-img"
             onClick={() => setShowImageModal(true)}
             onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_CARD_BACK; }} 
         />
-        <div style={{ flex: 1 }}>
-            <button onClick={handleBack} className="btn-secondary" style={{marginBottom: 10}}>Retour</button>
-            <h1 style={{ margin: "0 0 10px 0", fontSize: "2rem", display: "flex", alignItems: "center" }}>{deck.nom}</h1>
-            <div style={{ display: "flex", gap: 15, fontSize: "0.9rem", color: "var(--text-muted)" }}>
-                <span>Format: <strong style={{color: "var(--primary)"}}>{deck.format}</strong></span>
-                <span>Cartes: <strong style={{color: "var(--text-main)"}}>{mainboardCount}</strong> principal / <strong>{sideboardCount}</strong> réserve</span>
+        <div className="dd-header-info">
+            <button onClick={handleBack} className="btn-secondary mb-10">Retour</button>
+            <h1 className="dd-title">{deck.nom}</h1>
+            <div className="dd-meta">
+                <span>Format: <strong className="text-primary">{deck.format}</strong></span>
+                <span>Cartes: <strong>{mainboardCount}</strong> principal / <strong>{sideboardCount}</strong> réserve</span>
             </div>
             
             {validation && !validation.isValid && (
-                <div style={{ marginTop: 20, padding: 10, background: "rgba(244, 67, 54, 0.1)", border: "1px solid var(--danger)", borderRadius: "var(--radius)", color: "#ff8080" }}>
-                     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                        <span style={{fontWeight:"bold"}}>Deck Invalide</span>
+                <div className="dd-invalid-alert">
+                     <div className="dd-invalid-alert-header">
+                        <span className="font-bold">Deck Invalide</span>
                         <span>{validation.errors ? validation.errors.length : 1} erreur(s)</span>
                      </div>
                      {activeTab !== 'stats' && (
-                        <small style={{display:"block", marginTop:5, cursor:"pointer", textDecoration:"underline"}} onClick={() => setActiveTab('stats')}>
+                        <small className="dd-invalid-alert-link" onClick={() => setActiveTab('stats')}>
                             Voir les détails dans Statistiques
                         </small>
                      )}
@@ -404,23 +378,23 @@ export default function DeckDetail() {
         </div>
       </div>
 
-      <div style={tabContainerStyle}>
-          <div style={getTabStyle(activeTab === 'cards')} onClick={() => setActiveTab('cards')}>Cartes</div>
-          <div style={getTabStyle(activeTab === 'stats')} onClick={() => setActiveTab('stats')}>Statistiques & Erreurs</div>
-          <div style={getTabStyle(activeTab === 'settings')} onClick={() => setActiveTab('settings')}>Paramètres</div>
+      <div className="dd-tabs-container">
+          <div className={`dd-tab ${activeTab === 'cards' ? 'active' : ''}`} onClick={() => setActiveTab('cards')}>Cartes</div>
+          <div className={`dd-tab ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Statistiques & Erreurs</div>
+          <div className={`dd-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>Paramètres</div>
       </div>
 
-      <div style={{ padding: "20px 0" }}> 
+      <div className="dd-content"> 
           
           {activeTab === 'cards' && (
             <div>
               {deck.format === "commander" && groupedCards["Commander"] && (
-                  <div style={{ marginBottom: 40, padding: 15, background: "rgba(255, 152, 0, 0.05)", border: "1px solid var(--primary)", borderRadius: "8px" }}>
-                      <h3 style={{ borderBottom: "2px solid var(--primary)", paddingBottom: 5, margin: "0 0 15px 0", color: "var(--primary)", display: "flex", justifyContent: "space-between" }}>
+                  <div className="dd-commander-box">
+                      <h3 className="dd-category-title dd-commander-title">
                           Zone de Commandement
-                          <span style={{fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "normal"}}>{groupedCards["Commander"].length}</span>
+                          <span className="dd-category-count">{groupedCards["Commander"].length}</span>
                       </h3>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem", tableLayout: "fixed" }}>
+                      <table className="dd-table">
                           <tbody>
                               {groupedCards["Commander"].map((card, idx) => renderCardRow(card, idx, "Commander"))}
                           </tbody>
@@ -435,18 +409,18 @@ export default function DeckDetail() {
                   const categoryCount = cards.reduce((acc, c) => acc + (c.quantity || 1), 0);
 
                   return (
-                    <div key={typeKey} style={{ marginBottom: 30 }}>
-                        <h3 style={{ borderBottom: "2px solid var(--border)", paddingBottom: 5, marginBottom: 15, color: "var(--primary)", display: "flex", justifyContent: "space-between" }}>
+                    <div key={typeKey} className="dd-category-block">
+                        <h3 className="dd-category-title">
                             {TYPE_TRANSLATIONS[typeKey]}
-                            <span style={{fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "normal"}}>{categoryCount}</span>
+                            <span className="dd-category-count">{categoryCount}</span>
                         </h3>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem", tableLayout: "fixed" }}>
+                        <table className="dd-table">
                             <thead>
-                                <tr style={{ color: "var(--text-muted)", textAlign: "left", borderBottom: "1px solid var(--border)" }}>
-                                    <th style={{ padding: "8px", width: "35%" }}>Nom</th>
-                                    <th style={{ padding: "8px", width: "25%" }}>Type</th>
-                                    <th style={{ padding: "8px", width: "15%" }}>{typeKey === "Land" ? "Extension" : "Coût"}</th>
-                                    <th style={{ padding: "8px", width: "25%", textAlign: "right" }}>Actions</th>
+                                <tr>
+                                    <th style={{ width: "35%" }}>Nom</th>
+                                    <th style={{ width: "25%" }}>Type</th>
+                                    <th style={{ width: "15%" }}>{typeKey === "Land" ? "Extension" : "Coût"}</th>
+                                    <th style={{ width: "25%", textAlign: "right" }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -461,15 +435,15 @@ export default function DeckDetail() {
 
           {activeTab === 'stats' && (
              <div>
-                <h3 style={{color: "var(--text-main)"}}>Rapport de validation</h3>
+                <h3>Rapport de validation</h3>
                 {validation && !validation.isValid ? (
-                    <div style={{ background: "var(--bg-input)", padding: "20px", borderRadius: "var(--radius)", border: "1px solid var(--border)", marginBottom: "40px" }}>
-                        <ul style={{ color: "#ff8080", margin: 0, paddingLeft: "20px", lineHeight: "1.8" }}>
+                    <div className="dd-stats-error-box">
+                        <ul className="dd-stats-error-list">
                             {validation.errors.map((error, i) => <li key={i}>{error}</li>)}
                         </ul>
                     </div>
                 ) : (
-                    <div style={{ color: "var(--success)", padding: "20px", background: "rgba(76, 175, 80, 0.1)", borderRadius: "var(--radius)", marginBottom: "40px" }}>
+                    <div className="dd-stats-success-box">
                         Le deck est valide pour le format {deck.format}.
                     </div>
                 )}
@@ -481,17 +455,17 @@ export default function DeckDetail() {
       </div>
 
       {showImageModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: "80%", maxWidth: "800px", height: "80%", display: "flex", flexDirection: "column" }}>
-             <h3 style={{marginTop:0}}>Choisir l'image du deck</h3>
-             <div style={{ overflowY: "auto", flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "10px" }}>
+        <div className="modal-overlay" onClick={() => setShowImageModal(false)}>
+          <div className="modal-content dd-modal-img-content" onClick={(e) => e.stopPropagation()}>
+             <h3 className="m-0">Choisir l'image du deck</h3>
+             <div className="dd-modal-img-grid">
                  {deck.cards && deck.cards.map((card, i) => {
                      const displayImage = card.image_art_crop || card.image_normal;
                      if (!displayImage) return null;
-                     return <img key={i} src={displayImage} alt={card.name} onClick={() => handleUpdateImage(displayImage)} style={{ width: "100%", borderRadius: "8px", cursor: "pointer", objectFit: "cover", aspectRatio: "4/3" }} />;
+                     return <img key={i} src={displayImage} alt={card.name} onClick={() => handleUpdateImage(displayImage)} className="dd-modal-img-item" />;
                  })}
              </div>
-             <div style={{marginTop: 20, textAlign: "right"}}>
+             <div className="mt-20" style={{ textAlign: "right" }}>
                 <button className="btn-secondary" onClick={() => setShowImageModal(false)}>Annuler</button>
              </div>
           </div>

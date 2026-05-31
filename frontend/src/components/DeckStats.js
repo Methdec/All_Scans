@@ -14,32 +14,16 @@ const TYPE_COLORS = [
   "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6"
 ];
 
-const controlContainerStyle = {
-    background: "var(--bg-main)", padding: "4px", borderRadius: "8px", 
-    display: "flex", gap: "5px", border: "1px solid var(--border)"
-};
-
-const getButtonStyle = (isActive) => ({
-    background: isActive ? "var(--primary)" : "transparent",
-    color: isActive ? "#fff" : "var(--text-muted)",
-    border: "none", padding: "6px 12px", borderRadius: "6px",
-    cursor: "pointer", fontSize: "0.8rem", fontWeight: isActive ? "bold" : "normal",
-    transition: "all 0.2s ease"
-});
-
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div style={{ 
-          background: "#1e1e1e", border: "1px solid #444", padding: "12px", 
-          borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.5)", minWidth: "150px", zIndex: 100
-      }}>
-        {label && <p style={{ fontWeight: "bold", margin: "0 0 8px 0", color: "#fff", borderBottom:"1px solid #444", paddingBottom:4 }}>CMC {label}</p>}
+      <div className="custom-tooltip">
+        {label && <p className="custom-tooltip-title">CMC {label}</p>}
         {payload.map((entry, index) => (
            entry.value > 0 && (
-              <div key={index} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ color: entry.fill || entry.color, fontSize: "0.85rem", marginRight: 10 }}>● {entry.name}</span>
-                  <span style={{ color: "#fff", fontWeight: "bold", fontSize: "0.9rem" }}>{entry.value}</span>
+              <div key={index} className="custom-tooltip-item">
+                  <span className="custom-tooltip-label" style={{ color: entry.fill || entry.color }}>● {entry.name}</span>
+                  <span className="custom-tooltip-value">{entry.value}</span>
               </div>
            )
         ))}
@@ -54,10 +38,9 @@ export default function DeckStats({ deck, onUpdate }) {
   const [includeColorlessInPie, setIncludeColorlessInPie] = useState(false);
   const [loadingLands, setLoadingLands] = useState(false);
 
-  // --- MODALE GENERIQUE ---
   const [infoModal, setInfoModal] = useState({
       isOpen: false,
-      type: "info", // "info", "confirm", "success", "error"
+      type: "info", 
       title: "",
       message: "",
       onConfirm: null
@@ -67,13 +50,12 @@ export default function DeckStats({ deck, onUpdate }) {
   
   const closeInfoModal = () => setInfoModal({ isOpen: false, type: "info", title: "", message: "", onConfirm: null });
 
-  // --- EQUILIBRAGE TERRAINS SANS ALERTE ---
   const promptAutoBalance = () => {
     setInfoModal({
         isOpen: true,
         type: "confirm",
-        title: "Equilibrage des terrains",
-        message: "Calculer et ajuster automatiquement les terrains basiques selon la couleur de vos sorts ?\n\nCela utilisera des terrains generiques si votre collection ne suffit pas.",
+        title: "Équilibrage des terrains",
+        message: "Calculer et ajuster automatiquement les terrains basiques selon la couleur de vos sorts ?\n\nCela utilisera des terrains génériques si votre collection ne suffit pas.",
         onConfirm: executeAutoBalanceLands
     });
   };
@@ -94,7 +76,7 @@ export default function DeckStats({ deck, onUpdate }) {
 
         if (data.logs && data.logs.length > 0) {
             setInfoModal({
-                isOpen: true, type: "success", title: "Ajustements effectues", message: data.logs.join("\n")
+                isOpen: true, type: "success", title: "Ajustements effectués", message: data.logs.join("\n")
             });
         } else if (data.message) {
             setInfoModal({
@@ -200,9 +182,9 @@ export default function DeckStats({ deck, onUpdate }) {
   }, [cards, includeColorlessInPie]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div className="stats-container">
       
-      <div style={{ marginBottom: 10, padding: 20, border: "1px dashed var(--border)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255, 255, 255, 0.02)" }}>
+      <div className="stats-alert-box">
             <div>
                 <h4 style={{ margin: "0 0 5px 0", color: "var(--text-main)" }}>Gestion des Terrains</h4>
                 <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-muted)" }}>
@@ -215,19 +197,29 @@ export default function DeckStats({ deck, onUpdate }) {
                 className="btn-primary" 
                 style={{ display: "flex", alignItems: "center", gap: 10, opacity: loadingLands ? 0.7 : 1 }}
             >
-                <span>{loadingLands ? "Calcul en cours..." : "Equilibrer"}</span>
+                <span>{loadingLands ? "Calcul en cours..." : "Équilibrer"}</span>
             </button>
       </div>
 
       <div className="stat-card">
           <h3>
               Courbe de Mana
-              <div style={controlContainerStyle}>
-                  <button onClick={() => setCurveMode("type")} style={getButtonStyle(curveMode === "type")}>Par Type</button>
-                  <button onClick={() => setCurveMode("color")} style={getButtonStyle(curveMode === "color")}>Par Couleur</button>
+              <div className="chart-controls-container">
+                  <button 
+                      onClick={() => setCurveMode("type")} 
+                      className={`chart-toggle-btn ${curveMode === "type" ? "active" : ""}`}
+                  >
+                      Par Type
+                  </button>
+                  <button 
+                      onClick={() => setCurveMode("color")} 
+                      className={`chart-toggle-btn ${curveMode === "color" ? "active" : ""}`}
+                  >
+                      Par Couleur
+                  </button>
               </div>
           </h3>
-          <div style={{ width: "100%", height: 320 }}>
+          <div className="chart-wrapper-large">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={manaCurveData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
@@ -252,22 +244,22 @@ export default function DeckStats({ deck, onUpdate }) {
                 </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: "60px", marginTop: "20px", borderTop: "1px solid var(--border)", paddingTop: "15px" }}>
-               <div style={{textAlign: "center"}}>
-                   <span style={{color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px"}}>Moyenne</span>
-                   <div style={{fontSize: "1.8rem", fontWeight: "bold", color: "var(--primary)"}}>{statsMetrics.mean}</div>
+          <div className="metrics-container">
+               <div className="metric-block">
+                   <span className="metric-label">Moyenne</span>
+                   <div className="metric-value">{statsMetrics.mean}</div>
                </div>
-               <div style={{textAlign: "center"}}>
-                   <span style={{color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px"}}>Mediane</span>
-                   <div style={{fontSize: "1.8rem", fontWeight: "bold", color: "var(--primary)"}}>{statsMetrics.median}</div>
+               <div className="metric-block">
+                   <span className="metric-label">Médiane</span>
+                   <div className="metric-value">{statsMetrics.median}</div>
                </div>
           </div>
       </div>
 
       <div className="stats-grid">
           <div className="stat-card">
-               <h3>Repartition par Type</h3>
-               <div style={{ width: "100%", height: 250 }}>
+               <h3>Répartition par Type</h3>
+               <div className="chart-wrapper-small">
                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                        <PieChart>
                            <Pie data={typePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} stroke="none">
@@ -282,14 +274,17 @@ export default function DeckStats({ deck, onUpdate }) {
 
           <div className="stat-card">
                <h3>
-                   Couts de Mana
-                   <div style={controlContainerStyle}>
-                       <button onClick={() => setIncludeColorlessInPie(!includeColorlessInPie)} style={getButtonStyle(includeColorlessInPie)}>
+                   Coûts de Mana
+                   <div className="chart-controls-container">
+                       <button 
+                           onClick={() => setIncludeColorlessInPie(!includeColorlessInPie)} 
+                           className={`chart-toggle-btn ${includeColorlessInPie ? "active" : ""}`}
+                       >
                             {includeColorlessInPie ? "Avec Incolore" : "Sans Incolore"}
                        </button>
                    </div>
                </h3>
-               <div style={{ width: "100%", height: 250 }}>
+               <div className="chart-wrapper-small">
                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                        <PieChart>
                            <Pie data={colorPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} stroke="none">
@@ -306,19 +301,16 @@ export default function DeckStats({ deck, onUpdate }) {
       {/* --- MODALE D'INFORMATION / CONFIRMATION GENERIQUE --- */}
       {infoModal.isOpen && (
           <div className="modal-overlay" onClick={infoModal.type !== "confirm" ? closeInfoModal : null}>
-              <div className="modal-box" style={{ width: "450px", flexDirection: "column", padding: "25px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                  <h3 style={{ 
-                      marginTop: 0, 
-                      color: infoModal.type === "error" ? "var(--danger)" : infoModal.type === "success" ? "var(--success)" : "var(--primary)" 
-                  }}>
+              <div className="modal-box modal-md modal-flex-col" style={{ textAlign: "center", alignItems: "center" }} onClick={e => e.stopPropagation()}>
+                  <h3 className={`modal-title ${infoModal.type === "error" ? "text-danger" : infoModal.type === "success" ? "text-success" : "text-primary"}`}>
                       {infoModal.title}
                   </h3>
                   
-                  <div style={{ color: "var(--text-main)", fontSize: "0.95rem", whiteSpace: "pre-line", lineHeight: 1.6, margin: "15px 0 25px 0", textAlign: "left", background: "var(--bg-input)", padding: "15px", borderRadius: "8px", maxHeight: "200px", overflowY: "auto" }}>
+                  <div className="info-modal-scrollable" style={{ width: "100%" }}>
                       {infoModal.message}
                   </div>
                   
-                  <div style={{ display: "flex", justifyContent: "center", gap: "15px", width: "100%" }}>
+                  <div className="modal-actions" style={{ justifyContent: "center", width: "100%", marginTop: 0 }}>
                       {infoModal.type === "confirm" ? (
                           <>
                               <button onClick={closeInfoModal} className="btn-secondary" style={{ flex: 1 }}>Annuler</button>
@@ -331,7 +323,6 @@ export default function DeckStats({ deck, onUpdate }) {
               </div>
           </div>
       )}
-
     </div>
   );
 }

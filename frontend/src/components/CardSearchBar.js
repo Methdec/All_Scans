@@ -4,7 +4,6 @@ import "../theme.css";
 import CardGrid from "./CardGrid";
 import CardSearchDetailModal from "./CardSearchDetailModal";
 import Loader from "./Loader"; 
-import { API_BASE_URL } from '../utils/api';
 
 const MANA_SYMBOLS = {
   W: "https://svgs.scryfall.io/card-symbols/W.svg",
@@ -217,27 +216,23 @@ export default function CardSearchBar() {
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="custom-input"
+          className="input-field"
         />
         {tags.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+          <div className="flex gap-8 flex-wrap mt-8">
             {tags.map((tag, index) => (
               <div
                 key={index}
                 onClick={() => toggleExclusion(index)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "8px", padding: "4px 8px",
-                  borderRadius: "4px", border: `1px solid ${tag.isExcluded ? "#f44336" : "#4CAF50"}`,
-                  backgroundColor: "rgba(0,0,0,0.3)", cursor: "pointer", fontSize: "0.85rem", userSelect: "none"
-                }}
+                className={`search-tag ${tag.isExcluded ? 'search-tag-exclude' : 'search-tag-include'}`}
               >
-                <span style={{ color: "var(--text-main)" }}>{tag.text}</span>
-                <span style={{ fontWeight: "bold", color: tag.isExcluded ? "#f44336" : "#4CAF50" }}>
+                <span className="search-tag-text">{tag.text}</span>
+                <span className={tag.isExcluded ? 'search-tag-status-exclude' : 'search-tag-status-include'}>
                   {tag.isExcluded ? "NON" : "EST"}
                 </span>
                 <span
                   onClick={(e) => { e.stopPropagation(); removeTag(index); }}
-                  style={{ color: "var(--text-muted)", paddingLeft: "4px", paddingRight: "4px", fontSize: "1.1rem" }}
+                  className="search-tag-remove"
                 >
                   ✕
                 </span>
@@ -253,45 +248,13 @@ export default function CardSearchBar() {
     const isSelected = filters.colors.split(",").includes(code);
     return (
       <img 
-        src={MANA_SYMBOLS[code]} alt={alt} onClick={() => toggleColor(code)}
-        style={{ 
-            width: "32px", height: "32px", cursor: "pointer", borderRadius: "50%", 
-            border: isSelected ? "3px solid #FF9800" : "2px solid transparent", 
-            transform: isSelected ? "scale(1.1)" : "scale(1)", opacity: isSelected ? 1 : 0.6, transition: "all 0.2s" 
-        }}
+        src={MANA_SYMBOLS[code]} 
+        alt={alt} 
+        onClick={() => toggleColor(code)}
+        className={`mana-symbol-filter ${isSelected ? 'selected' : ''}`}
       />
     );
   };
-
-  const customStyles = `
-    .custom-select {
-      appearance: none; background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff);
-      border: 1px solid var(--border, #444); padding: 8px 30px 8px 10px; border-radius: 4px;
-      font-size: 0.9rem; width: 100%; cursor: pointer; box-sizing: border-box;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-      background-repeat: no-repeat; background-position: right 8px center; background-size: 20px; transition: all 0.2s ease;
-    }
-    .custom-select:hover, .custom-select:focus { border-color: #FF9800; outline: none; }
-    .custom-input {
-      width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border, #444);
-      background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); font-size: 0.9rem;
-      box-sizing: border-box; outline: none; transition: border-color 0.2s;
-    }
-    .custom-input:hover, .custom-input:focus { border-color: #FF9800; }
-    .btn-submit {
-      width: 100%; padding: 12px; background: var(--primary, #FF9800); color: white; border: none;
-      border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: all 0.2s; margin-top: 10px;
-    }
-    .btn-submit:hover { background: #e68a00; }
-    .btn-submit:disabled { background: #555; color: #888; cursor: not-allowed; }
-    .toggle-advanced {
-      background: transparent; border: none; color: var(--primary, #FF9800); cursor: pointer;
-      font-size: 0.85rem; text-decoration: underline; padding: 0; margin-top: 5px; margin-bottom: 15px;
-    }
-  `;
-
-  const fieldContainerStyle = { marginBottom: "15px" };
-  const labelStyle = { display: "block", marginBottom: "5px", fontSize: "0.85rem", color: "var(--text-muted, #aaa)", fontWeight: "600" };
 
   // --- LOGIQUE CAROUSEL ---
   const selectedIndex = results.findIndex(c => c.id === selectedCard?.id);
@@ -307,35 +270,34 @@ export default function CardSearchBar() {
   };
 
   return (
-    <div className="split-layout" style={{ height: "calc(100vh - 60px)", overflow: "hidden" }}>
-      <style>{customStyles}</style>
+    <div className="split-layout">
 
       {/* BARRE LATÉRALE GAUCHE (Filtres) */}
-      <div className="sidebar-filters" style={{ height: "100%", padding: 0, overflowY: "auto", overflowX: "hidden", borderRight: "1px solid var(--border)" }}>
-        <form onSubmit={handleSearchSubmit} style={{ padding: "20px" }}>
-          <div className="sidebar-title" style={{ marginBottom: "20px" }}>Recherche Scryfall</div>
+      <div className="sidebar-filters">
+        <form onSubmit={handleSearchSubmit}>
+          <div className="sidebar-title mb-20">Recherche Scryfall</div>
 
-          <div style={fieldContainerStyle}>
-            <label style={labelStyle}>Nom de la carte</label>
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher..." className="custom-input" />
+          <div className="search-field-group">
+            <label className="search-field-label">Nom de la carte</label>
+            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher..." className="input-field" />
           </div>
 
-          <div style={fieldContainerStyle}>
-            <div style={{display: "flex", alignItems: "center", marginBottom: "5px", justifyContent: "space-between"}}>
-                <label style={{...labelStyle, marginBottom: 0}}>Couleurs</label>
-                <select value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="custom-select" style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}>
+          <div className="search-field-group">
+            <div className="flex items-center justify-between mb-5">
+                <label className="search-field-label m-0">Couleurs</label>
+                <select value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="select-field" style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}>
                     <option value="exact">Exacte</option>
                     <option value="subset">Approx.</option>
                 </select>
             </div>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", background: "var(--bg-input, rgba(0,0,0,0.2))", padding: "10px", borderRadius: "4px" }}>
+            <div className="flex gap-10 flex-wrap justify-center p-10" style={{ background: "var(--bg-input)", borderRadius: "4px" }}>
                 {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
             </div>
           </div>
 
-          <div style={fieldContainerStyle}>
-            <label style={labelStyle}>Rareté</label>
-            <select name="rarity" value={filters.rarity} onChange={handleChange} className="custom-select">
+          <div className="search-field-group">
+            <label className="search-field-label">Rareté</label>
+            <select name="rarity" value={filters.rarity} onChange={handleChange} className="select-field">
               <option value="">Toutes</option>
               <option value="common">Commune</option>
               <option value="uncommon">Peu commune</option>
@@ -344,49 +306,49 @@ export default function CardSearchBar() {
             </select>
           </div>
 
-          <button type="button" className="toggle-advanced" onClick={() => setShowAdvanced(!showAdvanced)}>
+          <button type="button" className="btn-toggle-advanced" onClick={() => setShowAdvanced(!showAdvanced)}>
             {showAdvanced ? "Masquer les filtres avancés" : "+ Afficher les filtres avancés"}
           </button>
 
           {showAdvanced && (
-            <div style={{ marginTop: "10px", paddingTop: "15px", borderTop: "1px dashed var(--border)" }}>
+            <div className="search-advanced-section">
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Type(s)</label>
+              <div className="search-field-group">
+                <label className="search-field-label">Type(s)</label>
                 {renderTagInput(typeInput, setTypeInput, typeTags, setTypeTags, "Ex: Creature (Entrée)")}
               </div>
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Mot(s) clé(s)</label>
+              <div className="search-field-group">
+                <label className="search-field-label">Mot(s) clé(s)</label>
                 {renderTagInput(keywordInput, setKeywordInput, keywordTags, setKeywordTags, "Ex: Flying (Entrée)")}
               </div>
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Édition</label>
-                <input type="text" name="set_name" value={filters.set_name} onChange={handleChange} placeholder="Code (ex: khm)" className="custom-input" />
+              <div className="search-field-group">
+                <label className="search-field-label">Édition</label>
+                <input type="text" name="set_name" value={filters.set_name} onChange={handleChange} placeholder="Code (ex: khm)" className="input-field" />
               </div>
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Coût de mana (CMC)</label>
-                <input type="number" name="cmc" value={filters.cmc} onChange={handleChange} placeholder="Ex: 3" className="custom-input" />
+              <div className="search-field-group">
+                <label className="search-field-label">Coût de mana (CMC)</label>
+                <input type="number" name="cmc" value={filters.cmc} onChange={handleChange} placeholder="Ex: 3" className="input-field" />
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Force</label>
-                  <input type="text" name="power" value={filters.power} onChange={handleChange} placeholder="Ex: 3" className="custom-input" />
+              <div className="flex gap-10 mb-15">
+                <div className="flex-1">
+                  <label className="search-field-label">Force</label>
+                  <input type="text" name="power" value={filters.power} onChange={handleChange} placeholder="Ex: 3" className="input-field" />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Endu.</label>
-                  <input type="text" name="toughness" value={filters.toughness} onChange={handleChange} placeholder="Ex: 4" className="custom-input" />
+                <div className="flex-1">
+                  <label className="search-field-label">Endu.</label>
+                  <input type="text" name="toughness" value={filters.toughness} onChange={handleChange} placeholder="Ex: 4" className="input-field" />
                 </div>
               </div>
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Légalité</label>
-                <div style={{ display: "flex", gap: "5px" }}>
+              <div className="search-field-group">
+                <label className="search-field-label">Légalité</label>
+                <div className="flex gap-5">
                   <div style={{ flex: 2 }}>
-                    <select name="legality" value={filters.legality} onChange={handleChange} className="custom-select" style={{ paddingLeft: "5px" }}>
+                    <select name="legality" value={filters.legality} onChange={handleChange} className="select-field" style={{ paddingLeft: "5px" }}>
                       <option value="">Tous formats</option>
                       <option value="standard">Standard</option>
                       <option value="modern">Modern</option>
@@ -397,7 +359,7 @@ export default function CardSearchBar() {
                     </select>
                   </div>
                   <div style={{ flex: 1.2 }}>
-                    <select name="legalityType" value={filters.legalityType} onChange={handleChange} className="custom-select" style={{ paddingLeft: "5px" }}>
+                    <select name="legalityType" value={filters.legalityType} onChange={handleChange} className="select-field" style={{ paddingLeft: "5px" }}>
                       <option value="legal">Légal</option>
                       <option value="not">Banni</option>
                     </select>
@@ -409,7 +371,7 @@ export default function CardSearchBar() {
           )}
 
           <div style={{ marginTop: "30px", paddingBottom: "20px" }}>
-            <button type="submit" className="btn-submit" disabled={loading}>
+            <button type="submit" className="btn-primary w-full p-12 text-lg" disabled={loading}>
               Rechercher
             </button>
           </div>
@@ -417,22 +379,22 @@ export default function CardSearchBar() {
       </div>
 
       {/* ZONE DE RÉSULTATS DROITE */}
-      <div className="results-area" style={{ overflowY: "auto", position: "relative" }}>
+      <div className="results-area">
         
         {loading ? (
           <Loader />
         ) : (
           <>
-            {error && <div style={{ color: "var(--danger)", padding: "20px", textAlign: "center", fontWeight: "bold" }}>{error}</div>}
+            {error && <div className="text-center font-bold p-20 text-danger">{error}</div>}
             
             {!error && results.length === 0 && (
-              <div style={{ textAlign: "center", marginTop: 50, color: "var(--text-muted)" }}>
+              <div className="text-center mt-auto" style={{ paddingTop: 50, color: "var(--text-muted)" }}>
                 Saisissez des critères de recherche pour explorer Scryfall.
               </div>
             )}
 
             {results.length > 0 && (
-              <div style={{ padding: "20px" }}>
+              <div className="p-20">
                 <CardGrid
                   cards={results}
                   onCardClick={(cardId) => {
@@ -447,18 +409,18 @@ export default function CardSearchBar() {
         )}
 
         {!loading && results.length > 0 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "15px", padding: "20px", borderTop: "1px solid var(--border)", background: "var(--bg-main)" }}>
+          <div className="search-pagination">
             <button 
-              className="custom-input" 
+              className="input-field" 
               style={{ width: "auto", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }} 
               onClick={handlePrevPage} 
               disabled={currentPage === 1}
             >
               ← Précédent
             </button>
-            <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>Page {currentPage}</span>
+            <span className="font-bold" style={{ color: "var(--text-main)" }}>Page {currentPage}</span>
             <button 
-              className="custom-input" 
+              className="input-field" 
               style={{ width: "auto", cursor: !hasMore ? "not-allowed" : "pointer", opacity: !hasMore ? 0.5 : 1 }} 
               onClick={handleNextPage} 
               disabled={!hasMore}

@@ -39,7 +39,7 @@ export default function LoginPage() {
         return;
       }
 
-      // NOUVEAU : Si le backend demande le MFA
+      // Si le backend demande le MFA
       if (data.requires_mfa) {
           setMfaToken(data.mfa_token);
           setStep(2); // On passe a l'etape 2 (le code a 6 chiffres)
@@ -92,70 +92,84 @@ export default function LoginPage() {
       <AuthBackground />
 
       <div className="auth-box">
-        <h2 style={{ color: "var(--primary)", marginBottom: 30, fontSize: "2rem" }}>
+        <h2 className="auth-title">
             {step === 1 ? "Connexion" : "Double Authentification"}
         </h2>
         
         {step === 1 && (
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ textAlign: "left" }}>
-                <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="exemple@mail.com" style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
-            </div>
+            <form onSubmit={handleLogin} className="flex-col gap-20">
+              <div className="text-left">
+                  <label className="form-label text-muted font-normal">Email</label>
+                  <input 
+                      type="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      required 
+                      placeholder="exemple@mail.com" 
+                      className="input-field w-full"
+                  />
+              </div>
 
-            <div style={{ textAlign: "left" }}>
-                <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Mot de passe</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
-            </div>
+              <div className="text-left">
+                  <label className="form-label text-muted font-normal">Mot de passe</label>
+                  <input 
+                      type="password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      required 
+                      placeholder="••••••••" 
+                      className="input-field w-full"
+                  />
+              </div>
 
-            {msg && (
-                <div style={{ padding: 10, borderRadius: "var(--radius)", background: "rgba(244, 67, 54, 0.1)", color: "var(--danger)", fontSize: "0.9rem", border: "1px solid var(--danger)" }}>
-                {msg}
-                </div>
-            )}
+              {msg && (
+                  <div className="alert-danger">
+                    {msg}
+                  </div>
+              )}
 
-            <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 10 }}>
-                {loading ? "Connexion..." : "Se connecter"}
-            </button>
+              <button type="submit" className="btn-primary mt-10" disabled={loading}>
+                  {loading ? "Connexion..." : "Se connecter"}
+              </button>
             </form>
         )}
 
         {step === 2 && (
-            <form onSubmit={handleMfaSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <p style={{ color: "var(--text-main)", fontSize: "0.9rem", marginTop: "-10px", marginBottom: "10px" }}>
-                Veuillez entrer le code a 6 chiffres affiche sur votre application d'authentification (Google Authenticator, Authy...).
-            </p>
+            <form onSubmit={handleMfaSubmit} className="flex-col gap-20">
+              <p className="text-main text-sm mt-0 mb-10">
+                  Veuillez entrer le code à 6 chiffres affiché sur votre application d'authentification (Google Authenticator, Authy...).
+              </p>
 
-            <div style={{ textAlign: "left" }}>
-                <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Code de verification</label>
-                <input 
-                    type="text" 
-                    value={mfaCode} 
-                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} // Accepte uniquement 6 chiffres
-                    required 
-                    placeholder="123456" 
-                    style={{ width: "100%", boxSizing: "border-box", padding: "15px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--primary)", fontSize: "1.5rem", textAlign: "center", letterSpacing: "5px", fontWeight: "bold" }} 
-                />
-            </div>
+              <div className="text-left">
+                  <label className="form-label text-muted font-normal">Code de vérification</label>
+                  <input 
+                      type="text" 
+                      value={mfaCode} 
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} // Accepte uniquement 6 chiffres
+                      required 
+                      placeholder="123456" 
+                      className="input-field w-full text-center text-primary font-bold mfa-input"
+                  />
+              </div>
 
-            {msg && (
-                <div style={{ padding: 10, borderRadius: "var(--radius)", background: "rgba(244, 67, 54, 0.1)", color: "var(--danger)", fontSize: "0.9rem", border: "1px solid var(--danger)" }}>
-                {msg}
-                </div>
-            )}
+              {msg && (
+                  <div className="alert-danger">
+                    {msg}
+                  </div>
+              )}
 
-            <button type="submit" className="btn-primary" disabled={loading || mfaCode.length !== 6} style={{ marginTop: 10 }}>
-                {loading ? "Verification..." : "Valider"}
-            </button>
+              <button type="submit" className="btn-primary mt-10" disabled={loading || mfaCode.length !== 6}>
+                  {loading ? "Vérification..." : "Valider"}
+              </button>
 
-            <button type="button" onClick={() => setStep(1)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", textDecoration: "underline", fontSize: "0.85rem" }}>
-                Retour
-            </button>
+              <button type="button" onClick={() => setStep(1)} className="btn-link-cancel">
+                  Retour
+              </button>
             </form>
         )}
 
-        <p style={{ marginTop: 20, color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Pas encore de compte ? <Link to="/register" style={{ color: "var(--primary)", fontWeight: "bold" }}>Creer un compte</Link>
+        <p className="mt-20 text-muted text-sm">
+          Pas encore de compte ? <Link to="/register" className="text-primary font-bold">Créer un compte</Link>
         </p>
       </div>
     </div>

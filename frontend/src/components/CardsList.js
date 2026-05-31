@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import CardModal from "./CardModal"; 
-import ImportModal from "./ImportModal"; 
+import CardModal from "./CardModal";
 import CollectionManager from "./CollectionManager";
 import TagsManager from "./TagsManager";
 import "../theme.css";
@@ -37,8 +36,7 @@ export default function CardsList() {
   const abortControllerRef = useRef(null);
   const observer = useRef();
 
-  const [selectedCard, setSelectedCard] = useState(null); 
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [oracleText, setOracleText] = useState(""); 
@@ -69,30 +67,7 @@ export default function CardsList() {
   const [setFilter, setSetFilter] = useState(""); 
 
   const [tagsSummary, setTagsSummary] = useState([]);
-  
-  // NOUVEAU : État pour stocker le dictionnaire de couleurs
   const [tagColors, setTagColors] = useState({});
-
-  const customStyles = `
-    .custom-select {
-      appearance: none; -webkit-appearance: none; -moz-appearance: none; background-color: var(--bg-input, #2a2a2a);
-      color: var(--text-main, #fff); border: 1px solid var(--border, #444); padding: 8px 30px 8px 10px; border-radius: 4px;
-      font-size: 0.9rem; width: 100%; cursor: pointer; box-sizing: border-box;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-      background-repeat: no-repeat; background-position: right 8px center; background-size: 20px; transition: all 0.2s ease;
-    }
-    .custom-select:hover { border-color: #FF9800; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF9800'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e"); }
-    .custom-input { width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border, #444); background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); font-size: 0.9rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
-    .custom-input:hover, .custom-input:focus { border-color: #FF9800; }
-    .select-prefix { border-radius: 4px 0 0 4px; border-right: none; width: 45px; padding: 8px 2px; text-align: center; background-position: right 0px center; background-size: 16px; padding-right: 12px; }
-    .input-suffix { border-radius: 0 4px 4px 0; }
-    .tab-button { background: transparent; border: none; color: var(--text-main); font-weight: bold; font-size: 1.1rem; cursor: pointer; padding: 10px 20px; border-bottom: 3px solid transparent; transition: all 0.2s; }
-    .tab-button.active { color: var(--primary, #FF9800); border-bottom: 3px solid var(--primary, #FF9800); }
-    .tab-button:hover:not(.active) { color: var(--primary, #FF9800); opacity: 0.8; }
-  `;
-
-  const fieldContainerStyle = { marginBottom: "15px" };
-  const labelStyle = { display: "block", marginBottom: "5px", fontSize: "0.85rem", color: "var(--text-muted, #aaa)", fontWeight: "600" };
 
   const fetchAvailableTags = async () => {
       try {
@@ -106,7 +81,6 @@ export default function CardsList() {
       }
   };
 
-  // NOUVEAU : Fonction pour récupérer les couleurs des tags
   const fetchTagRulesColors = async () => {
       try {
           const res = await fetch(`${API_BASE_URL}/tags/rules`, { credentials: "include" });
@@ -124,7 +98,7 @@ export default function CardsList() {
   useEffect(() => {
       if (activeTab === "collection") {
           fetchAvailableTags();
-          fetchTagRulesColors(); // NOUVEAU
+          fetchTagRulesColors(); 
       }
   }, [activeTab]);
 
@@ -348,14 +322,13 @@ export default function CardsList() {
     setSelectedCard(null);
     if (hasChanged === true) {
         fetchAvailableTags();
-        fetchTagRulesColors(); // NOUVEAU
+        fetchTagRulesColors(); 
         fetchCards(page, true); 
     }
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
-      <style>{customStyles}</style>
 
       <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--bg-main)" }}>
         <button className={`tab-button ${activeTab === "collection" ? "active" : ""}`} onClick={() => setActiveTab("collection")}>Ma Collection</button>
@@ -365,19 +338,19 @@ export default function CardsList() {
       {activeTab === "collection" && (
         <div className="split-layout" style={{ flex: 1, overflow: "hidden" }}>
           
-          <div className="sidebar-filters" style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", borderRight: "1px solid var(--border)" }}>
+          <div className="cl-sidebar">
             
-            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "20px" }}>
+            <div className="cl-sidebar-content">
                 <div className="sidebar-title" style={{ marginBottom: "20px" }}>Filtres de Collection</div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Nom</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Nom</label>
                     <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="custom-input" />
                 </div>
 
-                <div style={fieldContainerStyle}>
+                <div className="cl-field-container">
                     <div style={{display: "flex", alignItems: "center", marginBottom: "5px", justifyContent: "space-between"}}>
-                        <label style={{...labelStyle, marginBottom: 0}}>Couleurs</label>
+                        <label className="cl-label" style={{ marginBottom: 0 }}>Couleurs</label>
                         <select 
                             value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="custom-select"
                             style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}
@@ -393,8 +366,8 @@ export default function CardsList() {
                     </div>
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Type(s)</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Type(s)</label>
                     <input type="text" placeholder="Ex: Creature (Entrée)" value={tempTypeInput} onChange={(e) => setTempTypeInput(e.target.value)} onKeyDown={handleTypeKeyDown} className="custom-input" />
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
                         {typeFilters.map((filter, index) => (
@@ -418,13 +391,13 @@ export default function CardsList() {
                     </div>
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Texte</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Texte</label>
                     <input type="text" placeholder="Ex: draw a card" value={oracleText} onChange={(e) => setOracleText(e.target.value)} className="custom-input" />
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Rareté</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Rareté</label>
                     <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="custom-select">
                         <option value="">Toutes</option>
                         <option value="common">Commune</option>
@@ -434,19 +407,19 @@ export default function CardsList() {
                     </select>
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Mot(s) clé(s)</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Mot(s) clé(s)</label>
                     <input type="text" placeholder="Ex: Flying, Haste..." value={keywordsFilter} onChange={(e) => setKeywordsFilter(e.target.value)} className="custom-input" />
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Coût Mana (CMC)</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Coût Mana (CMC)</label>
                     <input type="number" min="0" placeholder="Ex: 3" value={cmcFilter} onChange={(e) => setCmcFilter(e.target.value)} className="custom-input" />
                 </div>
 
-                <div style={fieldContainerStyle}>
+                <div className="cl-field-container">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                        <label style={{...labelStyle, marginBottom: 0}}>Tag(s) actif(s)</label>
+                        <label className="cl-label" style={{ marginBottom: 0 }}>Tag(s) actif(s)</label>
                         <button 
                             onClick={() => setIsTagsModalOpen(true)} 
                             style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.8rem", textDecoration: "underline", padding: 0 }}
@@ -490,8 +463,8 @@ export default function CardsList() {
                     </div>
                 </div>
 
-                <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>Légalité</label>
+                <div className="cl-field-container">
+                    <label className="cl-label">Légalité</label>
                     <div style={{display: "flex", gap: "8px"}}>
                         <div style={{flex: 2}}>
                             <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)} className="custom-select">
@@ -509,7 +482,7 @@ export default function CardsList() {
 
                 <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
                     <div style={{ flex: 1 }}>
-                        <label style={labelStyle}>Force</label>
+                        <label className="cl-label">Force</label>
                         <div style={{display: "flex"}}>
                             <select value={powerOp} onChange={(e) => setPowerOp(e.target.value)} className="custom-select select-prefix">
                                 <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
@@ -518,7 +491,7 @@ export default function CardsList() {
                         </div>
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label style={labelStyle}>Endu.</label>
+                        <label className="cl-label">Endu.</label>
                         <div style={{display: "flex"}}>
                             <select value={toughnessOp} onChange={(e) => setToughnessOp(e.target.value)} className="custom-select select-prefix">
                                 <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
@@ -528,8 +501,8 @@ export default function CardsList() {
                     </div>
                 </div>
 
-                <div style={{...fieldContainerStyle, marginTop: "20px", borderTop: "1px solid var(--border)", paddingTop: "15px"}}>
-                    <label style={labelStyle}>Trier par</label>
+                <div className="cl-field-container" style={{ marginTop: "20px", borderTop: "1px solid var(--border)", paddingTop: "15px" }}>
+                    <label className="cl-label">Trier par</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="custom-select" style={{ flex: 1 }}>
                             <option value="name">Nom</option>
@@ -552,12 +525,12 @@ export default function CardsList() {
                 <div style={{ height: "10px" }}></div>
             </div>
 
-            <div style={{ marginTop: "auto", padding: "10px 15px 15px 15px", flexShrink: 0, backgroundColor: "var(--bg-sidebar, inherit)", borderTop: "1px solid var(--border)" }}>
+            <div className="cl-sidebar-footer">
                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0", textAlign: "center" }}>Cartes affichées : <strong style={{ color: "var(--text-main)" }}>{cards.length}</strong></p>
             </div>
           </div>
 
-          <div className="results-area" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-main)" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-main)" }}>
             
             {setFilter && sortBy !== "set" && sortBy !== "tags" && (
                 <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", alignItems: "center", background: "var(--bg-sidebar)", flexShrink: 0 }}>
@@ -648,25 +621,18 @@ export default function CardsList() {
                         )}
                     </div>
                 ) : (
-                    <div className="collection-grid" style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                    <div className="cl-cards-grid">
                         {cards.map((card, index) => (
                             <div 
                               ref={cards.length === index + 1 ? lastCardElementRef : null} 
                               key={card._id || `${card.id}_${card.is_foil}`} 
-                              className="item-card" 
+                              className="cl-card-item"
                               onClick={() => setSelectedCard({ id: card.id || card._id, is_foil: card.is_foil })} 
-                              style={{ 
-                                backgroundColor: "var(--bg-input, #1e1e1e)", borderRadius: "10px", padding: "12px", 
-                                cursor: "pointer", display: "flex", flexDirection: "column", border: "2px solid transparent", 
-                                transition: "border-color 0.2s, transform 0.2s", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" 
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary, #FF9800)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
                             >
                                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                     <div style={{ position: "relative", width: "100%", marginBottom: "12px" }}>
                                       {card.image_normal ? (
-                                        <img src={card.image_normal} alt={card.name} style={{ width: "100%", height: "auto", borderRadius: "4.75% / 3.5%", display: "block" }} loading="lazy" />
+                                        <img src={card.image_normal} alt={card.name} className="cl-card-img" loading="lazy" />
                                       ) : (
                                         <div style={{ width: "100%", aspectRatio: "2.5/3.5", backgroundColor: "#333", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>Pas d'image</div>
                                       )}
@@ -715,7 +681,6 @@ export default function CardsList() {
               hasPrev={hasPrevCard}
             />
           )}
-          {isImportOpen && <ImportModal onClose={() => setIsImportOpen(false)} onImportComplete={() => { setIsImportOpen(false); setPage(1); fetchCards(1, true); }} />}
         </div>
       )}
 

@@ -43,7 +43,6 @@ export default function CollectionManager() {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  // Etats de la Modale Recapitulatif
   const [recapModalData, setRecapModalData] = useState(null);
   
   const [importPhase, setImportPhase] = useState("idle"); 
@@ -160,7 +159,6 @@ export default function CollectionManager() {
       }
   };
 
-  // Calcul des statistiques du recap
   const recapStats = useMemo(() => {
     if (!recapModalData || recapModalData._loading || !recapModalData.cards) return null;
 
@@ -325,73 +323,28 @@ export default function CollectionManager() {
     if (isWaiting) color = "var(--text-muted)"; 
 
     return (
-        <div style={{ marginBottom: "12px", opacity: isWaiting ? 0.5 : 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.85rem", color: "var(--text-main)" }}>
+        <div className="cm-progress-item" style={{ opacity: isWaiting ? 0.5 : 1 }}>
+            <div className="cm-progress-header">
                 <span>{label} {countText}</span>
                 <span style={{ color: color, fontWeight: "bold" }}>{percent}%</span>
             </div>
-            <div style={{ width: "100%", height: "8px", background: "var(--bg-input)", borderRadius: "4px", overflow: "hidden", border: "1px solid var(--border)" }}>
-                <div style={{ height: "100%", width: `${percent}%`, background: color, transition: "width 0.3s ease-out" }} />
+            <div className="cm-progress-bg">
+                <div className="cm-progress-fill" style={{ width: `${percent}%`, background: color }} />
             </div>
         </div>
     );
   };
 
-  const customStyles = `
-    .custom-select { appearance: none; background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); border: 1px solid var(--border, #444); padding: 10px 30px 10px 12px; border-radius: 4px; font-size: 0.95rem; width: 100%; cursor: pointer; box-sizing: border-box; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 20px; transition: all 0.2s ease; }
-    .custom-select:hover, .custom-select:focus { border-color: #FF9800; outline: none; }
-    .custom-textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border, #444); background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); font-size: 0.9rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; resize: vertical; min-height: 150px; }
-    .custom-textarea:hover, .custom-textarea:focus { border-color: #FF9800; }
-    .file-drop-area { display: block; width: 100%; padding: 25px 20px; border-radius: 8px; border: 2px dashed var(--border, #444); background-color: var(--bg-input, #2a2a2a); color: var(--text-main, #fff); cursor: pointer; transition: all 0.2s; box-sizing: border-box; text-align: center; }
-    .file-drop-area:hover { border-color: #FF9800; background-color: rgba(255, 152, 0, 0.05); }
-    .file-drop-area input[type="file"] { display: none; } 
-    .divider-container { display: flex; align-items: center; text-align: center; margin: 25px 0; color: var(--text-muted); font-size: 0.9rem; font-weight: bold; }
-    .divider-container::before, .divider-container::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
-    .divider-container:not(:empty)::before { margin-right: 15px; }
-    .divider-container:not(:empty)::after { margin-left: 15px; }
-    .btn-action { width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: all 0.2s; }
-    .btn-primary { background: var(--primary, #FF9800); color: white; border: none; }
-    .btn-primary:hover:not(:disabled) { background: #e68a00; }
-    .btn-primary:disabled { background: var(--border, #ccc); color: var(--text-muted, #888); cursor: not-allowed; }
-    .btn-outline { background: transparent; color: var(--primary, #FF9800); border: 2px solid var(--primary, #FF9800); }
-    .btn-outline:hover:not(:disabled) { background: rgba(255, 152, 0, 0.1); }
-    .btn-outline:disabled { border-color: var(--border, #ccc); color: var(--text-muted, #888); cursor: not-allowed; }
-    .history-card-container { background-color: var(--bg-input, #1e1e1e); border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); overflow: hidden; border-left: 4px solid transparent; transition: all 0.2s; border: 1px solid var(--border); }
-    .history-card-container.success { border-left-color: #4CAF50; }
-    .history-card-container.warning { border-left-color: #FFC107; }
-    .history-card-container.error { border-left-color: #F44336; }
-    .history-card-header { padding: 15px; display: flex; align-items: center; cursor: pointer; }
-    .history-card-header:hover { background-color: rgba(255,255,255,0.02); }
-    .history-details-list { padding: 0 15px 15px 15px; border-top: 1px solid var(--border); }
-    .history-card-item { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; align-items: center; }
-    .history-card-item:last-child { border-bottom: none; }
-    .card-found { color: var(--primary, #FF9800); font-weight: 500; }
-    .card-not-found { color: var(--text-muted, #777); font-style: italic; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-right: 15px; }
-    .badge.import { background-color: rgba(33, 150, 243, 0.1); color: #2196F3; border: 1px solid #2196F3; }
-    .badge.export { background-color: rgba(156, 39, 176, 0.1); color: #9C27B0; border: 1px solid #9C27B0; }
-  `;
-
   return (
     <>
-    <div className="split-layout" style={{ height: "calc(100vh - 110px)", overflow: "hidden", display: "flex" }}>
-      <style>{customStyles}</style>
-
+    <div className="cm-split-layout">
+      
       {/* PANNEAU DE GAUCHE : IMPORT / EXPORT */}
-      <div className="sidebar-filters" style={{ 
-          width: "350px", 
-          height: "100%", 
-          padding: "20px", 
-          paddingBottom: "50px", 
-          overflowY: "auto", 
-          borderRight: "1px solid var(--border)", 
-          background: "var(--bg-panel)",
-          boxSizing: "border-box" 
-      }}>
-        <h2 style={{ marginTop: 0, marginBottom: "25px", color: "var(--primary)" }}>Gestion de la Collection</h2>
+      <div className="cm-sidebar">
+        <h2 className="cm-title">Gestion de la Collection</h2>
 
-        <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "12px", padding: "25px", marginBottom: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--text-main)", fontSize: "1.25rem" }}>Importer des cartes</h3>
+        <div className="cm-box">
+          <h3 className="cm-subtitle">Importer des cartes</h3>
           
           <label className="file-drop-area">
             <input id="file-import-input" type="file" accept=".txt,.csv,.dek" onChange={handleFileChange} disabled={importPhase !== "idle"} />
@@ -402,27 +355,27 @@ export default function CollectionManager() {
           <div className="divider-container">OU</div>
 
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontSize: "0.95rem", color: "var(--text-main)", fontWeight: "bold" }}>Coller une liste</label>
+            <label className="cm-label">Coller une liste</label>
             <textarea value={importText} onChange={handleTextChange} disabled={importPhase !== "idle"} placeholder="Ex:&#10;4 Lightning Bolt" className="custom-textarea" />
           </div>
 
           {importPhase !== "idle" ? (
-            <div style={{ marginTop: "20px", padding: "15px", background: "var(--bg-input)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <div className="cm-progress-container">
                 {renderProgressBar("Lecture du fichier", progressReading, "reading")}
                 {renderProgressBar("Nettoyage", progressCleaning, "cleaning")}
                 {renderProgressBar("Ajout BDD", progressDb, "db", `(${processedDbCount} / ${totalDbCount})`)}
             </div>
           ) : (
-            <button onClick={handleStartImport} disabled={(!importText.trim() && !importFile) || isExporting} className="btn-action btn-primary" style={{ marginTop: "10px" }}>
+            <button onClick={handleStartImport} disabled={(!importText.trim() && !importFile) || isExporting} className="btn-action btn-primary">
               Lancer l'importation
             </button>
           )}
         </div>
 
-        <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "12px", padding: "25px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--text-main)", fontSize: "1.25rem" }}>Exporter la collection</h3>
+        <div className="cm-box">
+          <h3 className="cm-subtitle">Exporter la collection</h3>
           <div style={{ marginBottom: "25px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontSize: "0.95rem", color: "var(--text-main)", fontWeight: "bold" }}>Format de sortie</label>
+            <label className="cm-label">Format de sortie</label>
             <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} className="custom-select">
               <option value="txt">Fichier Texte (.txt)</option>
               <option value="csv">Fichier CSV standard</option>
@@ -434,15 +387,11 @@ export default function CollectionManager() {
             {isExporting ? "Génération en cours..." : "Générer l'export"}
           </button>
         </div>
-
-        {/* CALE POUR LE SCROLL */}
-        <div style={{ height: "40px", width: "100%" }}></div>
-
       </div>
 
       {/* PANNEAU DE DROITE : HISTORIQUE */}
-      <div className="results-area" style={{ flex: 1, padding: "30px", overflowY: "auto", position: "relative", backgroundColor: "var(--bg-main)", boxSizing: "border-box" }}>
-        <h2 style={{ marginTop: 0, marginBottom: "25px", color: "var(--text-main)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="cm-results-area">
+        <h2 className="cm-title">
           Historique des opérations
           <button onClick={openClearModal} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.9rem", textDecoration: "underline" }}>Effacer l'historique</button>
         </h2>
@@ -485,9 +434,7 @@ export default function CollectionManager() {
                         {item.type === "IMPORT" && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); openRevertModal(item._id); }}
-                            style={{ background: "var(--danger, #F44336)", color: "white", border: "none", padding: "4px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", transition: "background 0.2s" }}
-                            onMouseOver={(e) => e.currentTarget.style.background = "#D32F2F"}
-                            onMouseOut={(e) => e.currentTarget.style.background = "var(--danger, #F44336)"}
+                            className="cm-btn-revert"
                           >
                             Annuler cet import
                           </button>
@@ -502,11 +449,7 @@ export default function CollectionManager() {
                                 <div key={i} className="history-card-item">
                                   <span className={c.found ? "card-found" : "card-not-found"}>
                                     {c.quantity && `${c.quantity}x `}{displayName}
-                                    {isFoil && (
-                                        <span style={{ marginLeft: "6px", background: "linear-gradient(45deg, #FFD700, #FF9800)", color: "#121212", fontSize: "0.65rem", fontWeight: "bold", padding: "2px 4px", borderRadius: "4px", verticalAlign: "middle" }}>
-                                            F
-                                        </span>
-                                    )}
+                                    {isFoil && <span className="foil-badge-sm">F</span>}
                                   </span>
                                   <span style={{ fontSize: "0.8rem", color: c.found ? "#4CAF50" : "#F44336" }}>
                                     {c.found ? "Trouvée" : "Introuvable"}
@@ -531,7 +474,7 @@ export default function CollectionManager() {
     {/* MODALE DU RECAPITULATIF BDD */}
     {recapModalData && (
         <div className="modal-overlay" onClick={() => setRecapModalData(null)}>
-            <div className="modal-content" style={{ width: "90%", maxWidth: "900px", maxHeight: "85vh", overflowY: "auto", padding: "30px", border: "1px solid var(--primary)" }} onClick={e => e.stopPropagation()}>
+            <div className="modal-content cm-modal-recap-content" onClick={e => e.stopPropagation()}>
                 
                 {recapModalData._loading ? (
                     <div style={{ textAlign: "center", padding: "50px", color: "var(--text-muted)" }}>Génération du rapport en cours...</div>
@@ -551,16 +494,16 @@ export default function CollectionManager() {
 
                         <p style={{ color: "var(--text-main)", marginBottom: "20px", fontSize: "1.1rem" }}>{recapModalData.log_details}</p>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginBottom: "30px" }}>
-                            <div style={{ background: "var(--bg-main)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border)", textAlign: "center" }}>
-                                <p style={{ margin: "0 0 10px 0", color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px" }}>Valeur Estimée Ajoutée</p>
+                        <div className="cm-stat-grid-2">
+                            <div className="cm-stat-box">
+                                <p className="cm-stat-box-label">Valeur Estimée Ajoutée</p>
                                 <p style={{ margin: 0, fontSize: "2.5rem", fontWeight: "bold", color: "var(--success)" }}>
                                     {recapStats.totalPrice.toFixed(2)} €
                                 </p>
                             </div>
 
-                            <div style={{ background: "var(--bg-main)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                                <p style={{ margin: "0 0 10px 0", color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px" }}>Plus belle trouvaille</p>
+                            <div className="cm-stat-box cm-stat-box-flex">
+                                <p className="cm-stat-box-label">Plus belle trouvaille</p>
                                 {recapStats.mostExpensiveCard ? (
                                     <div style={{ textAlign: "center" }}>
                                         <p style={{ margin: "0 0 5px 0", color: "var(--primary)", fontWeight: "bold", fontSize: "1.1rem" }}>{recapStats.mostExpensiveCard.name}</p>
@@ -572,35 +515,35 @@ export default function CollectionManager() {
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "30px" }}>
-                            <div style={{ background: "var(--bg-main)", padding: "25px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+                        <div className="cm-stat-grid-large">
+                            <div className="cm-stat-box" style={{ padding: "25px", textAlign: "left" }}>
                                 <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Courbe de Mana (hors terrains)</h3>
-                                <div style={{ display: "flex", alignItems: "flex-end", height: "200px", gap: "10px", paddingBottom: "30px", borderBottom: "1px solid #444", position: "relative" }}>
+                                <div className="cm-mana-curve-container">
                                     {Object.entries(recapStats.manaCurve).map(([cmc, count]) => {
                                         const heightPercent = recapStats.maxManaCurveCount > 0 ? (count / recapStats.maxManaCurveCount) * 100 : 0;
                                         return (
-                                            <div key={cmc} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", position: "relative" }}>
-                                                <div style={{ width: "100%", maxWidth: "40px", height: `${Math.max(heightPercent, 2)}%`, background: "var(--primary)", borderRadius: "4px 4px 0 0", transition: "height 0.5s ease" }}></div>
-                                                {count > 0 && <span style={{ position: "absolute", top: `calc(100% - ${Math.max(heightPercent, 2)}% - 20px)`, fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-main)" }}>{count}</span>}
-                                                <span style={{ position: "absolute", bottom: "-25px", color: "var(--text-muted)", fontWeight: "bold" }}>{cmc}</span>
+                                            <div key={cmc} className="cm-mana-bar-col">
+                                                <div className="cm-mana-bar" style={{ height: `${Math.max(heightPercent, 2)}%` }}></div>
+                                                {count > 0 && <span className="cm-mana-bar-count" style={{ top: `calc(100% - ${Math.max(heightPercent, 2)}% - 20px)` }}>{count}</span>}
+                                                <span className="cm-mana-bar-label">{cmc}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            <div style={{ background: "var(--bg-main)", padding: "25px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+                            <div className="cm-stat-box" style={{ padding: "25px", textAlign: "left" }}>
                                 <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Répartition de l'Import</h3>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                                     {recapStats.sortedTypes.map(({ type, count }) => {
                                         const percentage = ((count / recapStats.totalCardsImported) * 100).toFixed(1);
                                         return (
-                                            <div key={type} style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                                            <div key={type} className="cm-type-row">
+                                                <div className="cm-type-row-header">
                                                     <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{TYPE_TRANSLATIONS[type] || type}</span>
                                                     <span style={{ color: "var(--text-muted)" }}>{count} cartes ({percentage}%)</span>
                                                 </div>
-                                                <div style={{ height: "8px", width: "100%", background: "var(--bg-input)", borderRadius: "4px", overflow: "hidden" }}>
+                                                <div className="cm-type-bar-bg">
                                                     <div style={{ height: "100%", width: `${percentage}%`, background: type === "Land" ? "#4CAF50" : type === "Creature" ? "#FF9800" : "var(--primary)", borderRadius: "4px" }}></div>
                                                 </div>
                                             </div>

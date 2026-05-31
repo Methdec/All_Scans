@@ -81,81 +81,75 @@ export default function RecapModal({ recapData, loading, onClose }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" style={{ width: "90%", maxWidth: "900px", maxHeight: "85vh", overflowY: "auto", padding: "30px", border: "1px solid var(--primary)" }} onClick={e => e.stopPropagation()}>
+            <div className="modal-content recap-modal-content" onClick={e => e.stopPropagation()}>
                 
                 {loading ? (
-                    <div style={{ textAlign: "center", padding: "50px", color: "var(--text-muted)" }}>Génération du rapport en cours...</div>
+                    <div className="p-20 text-center text-muted mt-20">Génération du rapport en cours...</div>
                 ) : !stats ? (
-                    <div style={{ textAlign: "center", padding: "50px", color: "var(--text-muted)" }}>
+                    <div className="p-20 text-center text-muted mt-20">
                         <p>Aucune donnée détaillée à analyser pour cet événement.</p>
-                        <button className="btn-secondary" onClick={onClose} style={{ marginTop: "20px" }}>Fermer</button>
+                        <button className="btn-secondary mt-20" onClick={onClose}>Fermer</button>
                     </div>
                 ) : (
                     <>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "15px", marginBottom: "25px" }}>
-                            <h2 style={{ margin: 0, color: "var(--primary)", display: "flex", alignItems: "center", gap: "10px" }}>
-                                Bilan de l'opération
-                            </h2>
-                            <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}>✕</button>
+                        <div className="recap-header">
+                            <h2 className="recap-title">Bilan de l'opération</h2>
+                            <button onClick={onClose} className="recap-close-btn">✕</button>
                         </div>
 
-                        <p style={{ color: "var(--text-main)", marginBottom: "20px", fontSize: "1.1rem" }}>{recapData.log_details}</p>
+                        <p className="recap-subtitle">{recapData.log_details}</p>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginBottom: "30px" }}>
-                            {/* PRIX GLOBAL */}
-                            <div style={{ background: "var(--bg-main)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border)", textAlign: "center" }}>
-                                <p style={{ margin: "0 0 10px 0", color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px" }}>Valeur Estimée Ajoutée</p>
-                                <p style={{ margin: 0, fontSize: "2.5rem", fontWeight: "bold", color: "var(--success)" }}>
+                        <div className="recap-grid-2">
+                            <div className="recap-box" style={{ padding: "20px" }}>
+                                <p className="recap-box-label">Valeur Estimée Ajoutée</p>
+                                <p className="recap-box-val-success">
                                     {stats.totalPrice.toFixed(2)} €
                                 </p>
                             </div>
 
-                            {/* CARTE LA PLUS CHERE */}
-                            <div style={{ background: "var(--bg-main)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                                <p style={{ margin: "0 0 10px 0", color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px" }}>Plus belle trouvaille</p>
+                            <div className="recap-box recap-box-flex" style={{ padding: "20px" }}>
+                                <p className="recap-box-label">Plus belle trouvaille</p>
                                 {stats.mostExpensiveCard ? (
-                                    <div style={{ textAlign: "center" }}>
-                                        <p style={{ margin: "0 0 5px 0", color: "var(--primary)", fontWeight: "bold", fontSize: "1.1rem" }}>{stats.mostExpensiveCard.name}</p>
-                                        <p style={{ margin: 0, color: "var(--text-main)", fontSize: "1.2rem" }}>{stats.maxPrice.toFixed(2)} €</p>
+                                    <div className="text-center">
+                                        <p className="recap-box-card-name">{stats.mostExpensiveCard.name}</p>
+                                        <p className="recap-box-card-price">{stats.maxPrice.toFixed(2)} €</p>
                                     </div>
                                 ) : (
-                                    <p style={{ margin: 0, color: "var(--text-muted)" }}>N/A</p>
+                                    <p className="m-0 text-muted">N/A</p>
                                 )}
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "30px" }}>
-                            {/* COURBE DE MANA */}
-                            <div style={{ background: "var(--bg-main)", padding: "25px", borderRadius: "12px", border: "1px solid var(--border)" }}>
-                                <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Courbe de Mana (hors terrains)</h3>
-                                <div style={{ display: "flex", alignItems: "flex-end", height: "200px", gap: "10px", paddingBottom: "30px", borderBottom: "1px solid #444", position: "relative" }}>
+                        <div className="recap-grid-large">
+                            <div className="recap-box text-left">
+                                <h3 className="recap-chart-title">Courbe de Mana (hors terrains)</h3>
+                                <div className="recap-mana-container">
                                     {Object.entries(stats.manaCurve).map(([cmc, count]) => {
                                         const heightPercent = stats.maxManaCurveCount > 0 ? (count / stats.maxManaCurveCount) * 100 : 0;
                                         return (
-                                            <div key={cmc} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", position: "relative" }}>
-                                                <div style={{ width: "100%", maxWidth: "40px", height: `${Math.max(heightPercent, 2)}%`, background: "var(--primary)", borderRadius: "4px 4px 0 0", transition: "height 0.5s ease" }}></div>
-                                                {count > 0 && <span style={{ position: "absolute", top: `calc(100% - ${Math.max(heightPercent, 2)}% - 20px)`, fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-main)" }}>{count}</span>}
-                                                <span style={{ position: "absolute", bottom: "-25px", color: "var(--text-muted)", fontWeight: "bold" }}>{cmc}</span>
+                                            <div key={cmc} className="recap-mana-col">
+                                                <div className="recap-mana-bar" style={{ height: `${Math.max(heightPercent, 2)}%` }}></div>
+                                                {count > 0 && <span className="recap-mana-count" style={{ top: `calc(100% - ${Math.max(heightPercent, 2)}% - 20px)` }}>{count}</span>}
+                                                <span className="recap-mana-label">{cmc}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            {/* REPARTITION DES TYPES */}
-                            <div style={{ background: "var(--bg-main)", padding: "25px", borderRadius: "12px", border: "1px solid var(--border)" }}>
-                                <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Répartition de l'Import</h3>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                            <div className="recap-box text-left">
+                                <h3 className="recap-chart-title">Répartition de l'Import</h3>
+                                <div className="recap-type-container">
                                     {stats.sortedTypes.map(({ type, count }) => {
                                         const percentage = ((count / stats.totalCardsImported) * 100).toFixed(1);
                                         return (
-                                            <div key={type} style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                                                    <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{TYPE_TRANSLATIONS[type] || type}</span>
-                                                    <span style={{ color: "var(--text-muted)" }}>{count} cartes ({percentage}%)</span>
+                                            <div key={type} className="recap-type-row">
+                                                <div className="recap-type-header">
+                                                    <span className="recap-type-name">{TYPE_TRANSLATIONS[type] || type}</span>
+                                                    <span className="recap-type-stats">{count} cartes ({percentage}%)</span>
                                                 </div>
-                                                <div style={{ height: "8px", width: "100%", background: "var(--bg-input)", borderRadius: "4px", overflow: "hidden" }}>
-                                                    <div style={{ height: "100%", width: `${percentage}%`, background: type === "Land" ? "#4CAF50" : type === "Creature" ? "#FF9800" : "var(--primary)", borderRadius: "4px" }}></div>
+                                                <div className="recap-type-bar-bg">
+                                                    <div className="recap-type-bar-fill" style={{ width: `${percentage}%`, background: type === "Land" ? "#4CAF50" : type === "Creature" ? "#FF9800" : "var(--primary)" }}></div>
                                                 </div>
                                             </div>
                                         );
@@ -164,7 +158,7 @@ export default function RecapModal({ recapData, loading, onClose }) {
                             </div>
                         </div>
                         
-                        <div style={{ marginTop: "30px", textAlign: "right" }}>
+                        <div className="text-right mt-30">
                             <button className="btn-secondary" onClick={onClose}>Fermer le bilan</button>
                         </div>
                     </>

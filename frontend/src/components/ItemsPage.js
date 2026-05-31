@@ -147,7 +147,6 @@ export default function ItemsPage() {
       await fetchItems();
       if (itemToDelete.type === "folder") fetchAllFolders();
       
-      // --- CORRECTION : Fermeture de l'onglet individuel ---
       const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");
       const updatedDecks = storedDecks.filter(d => d.id !== itemToDelete.id);
       localStorage.setItem("openDecks", JSON.stringify(updatedDecks));
@@ -184,7 +183,7 @@ export default function ItemsPage() {
               
               if (!res.ok) {
                   const errorData = await res.json();
-                  throw new Error(errorData.detail || "Erreur de deplacement");
+                  throw new Error(errorData.detail || "Erreur de déplacement");
               }
           }
           await fetchItems();
@@ -217,7 +216,6 @@ export default function ItemsPage() {
           await fetchItems();
           fetchAllFolders();
           
-          // --- CORRECTION : Fermeture des onglets multiples ---
           const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");
           const updatedDecks = storedDecks.filter(d => !selectedItems.includes(d.id));
           localStorage.setItem("openDecks", JSON.stringify(updatedDecks));
@@ -272,10 +270,10 @@ export default function ItemsPage() {
           } else {
               setShowImportDeckModal(false);
               setImportDeckData({ nom: "", format: "standard", decklist: "" });
-              setInfoModal({ isOpen: true, type: "success", title: "Succes", message: "Le deck a ete importe avec succes." });
+              setInfoModal({ isOpen: true, type: "success", title: "Succès", message: "Le deck a été importé avec succès." });
           }
       } catch (err) {
-          setErrorModal({ isOpen: true, message: "Erreur lors de l'importation du deck. Veuillez verifier votre liste." });
+          setErrorModal({ isOpen: true, message: "Erreur lors de l'importation du deck. Veuillez vérifier votre liste." });
       } finally {
           setIsImporting(false);
       }
@@ -293,7 +291,7 @@ export default function ItemsPage() {
     return (
         <div 
             key={item.id} 
-            className="item-card" 
+            className={`item-card ${isSelected ? 'ip-card-selected' : ''}`}
             onClick={() => {
                 if (isSelectionMode) {
                     toggleItemSelection(item.id);
@@ -301,39 +299,25 @@ export default function ItemsPage() {
                     item.type === "folder" ? openFolder(item) : navigate(`/deck/${item.id}`);
                 }
             }}
-            style={{
-                position: "relative",
-                border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border)",
-                transform: isSelected ? "translateY(-4px)" : "none",
-                boxShadow: isSelected ? "0 8px 16px rgba(0,0,0,0.4)" : "none"
-            }}
         >
           {isSelectionMode && (
-              <div style={{
-                  position: "absolute", top: 10, right: 10, width: 22, height: 22, 
-                  borderRadius: "4px", border: "2px solid var(--primary)",
-                  background: isSelected ? "var(--primary)" : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5
-              }}>
-                  {isSelected && <span style={{ color: "white", fontSize: "16px", fontWeight: "bold", marginTop: "-2px" }}>✓</span>}
+              <div className={`ip-checkbox ${isSelected ? 'active' : ''}`}>
+                  {isSelected && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                  )}
               </div>
           )}
 
           {item.type !== "deck" && !isSelectionMode && (
-            <button className="delete-btn" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(item); }}>
-                X
-            </button>
+            <button className="delete-btn" onClick={(e) => { e.stopPropagation(); confirmDeleteItem(item); }}>X</button>
           )}
 
           {item.image ? (
-            <img 
-                src={item.image} 
-                alt={item.nom} 
-                className="item-image" 
-                style={{ objectFit: "cover", objectPosition: "center" }} 
-            />
+            <img src={item.image} alt={item.nom} className="item-image" style={{ objectFit: "cover", objectPosition: "center" }} />
           ) : (
-            <div className="item-image" style={{background: "var(--bg-input)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)"}}>
+            <div className="ip-folder-icon">
                 {item.type === "folder" ? (
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
                 ) : (
@@ -342,10 +326,10 @@ export default function ItemsPage() {
             </div>
           )}
 
-          <div style={{ fontWeight: 700, color: "var(--text-main)", marginTop: 8 }}>{item.nom}</div>
+          <div className="font-bold text-main mt-8">{item.nom}</div>
           
           {item.type === "deck" && (
-              <div style={{ fontSize: "0.8rem", color: "var(--primary)", marginTop: 2 }}>
+              <div className="text-sm text-primary mt-5">
                   {item.is_constructed ? "(Construit) " : ""} 
                   {item.cards ? item.cards.length : 0} cartes
               </div>
@@ -355,17 +339,14 @@ export default function ItemsPage() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="p-20">
       
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{margin: 0, color: "var(--primary)"}}>Bibliotheque</h2>
+      <div className="ip-header">
+          <h2 className="m-0 text-primary">Bibliothèque</h2>
           
-          <div style={{ display: "flex", gap: "10px" }}>
-              <button 
-                  className={isSelectionMode ? "btn-primary" : "btn-secondary"} 
-                  onClick={toggleSelectionMode}
-              >
-                  {isSelectionMode ? "Annuler la selection" : "Selectionner"}
+          <div className="flex gap-10">
+              <button className={isSelectionMode ? "btn-primary" : "btn-secondary"} onClick={toggleSelectionMode}>
+                  {isSelectionMode ? "Annuler la sélection" : "Sélectionner"}
               </button>
               {!isSelectionMode && (
                   <>
@@ -377,32 +358,29 @@ export default function ItemsPage() {
       </div>
 
       {isSelectionMode && selectedItems.length > 0 && (
-          <div style={{ background: "var(--bg-input)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border)", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>
-                  {selectedItems.length} element(s) selectionne(s)
+          <div className="ip-selection-bar">
+              <span className="text-main font-bold">
+                  {selectedItems.length} élément(s) sélectionné(s)
               </span>
-              <div style={{ display: "flex", gap: "10px" }}>
-                  <button className="btn-secondary" onClick={() => setShowMoveModal(true)}>Deplacer</button>
+              <div className="flex gap-10">
+                  <button className="btn-secondary" onClick={() => setShowMoveModal(true)}>Déplacer</button>
                   <button className="btn-danger" onClick={confirmBulkDelete}>Supprimer</button>
               </div>
           </div>
       )}
 
-      <div style={{ marginBottom: "20px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-        <span onClick={goRoot} style={{ cursor: "pointer", color: !currentFolderId ? "var(--text-main)" : "var(--primary)", fontWeight: !currentFolderId ? "bold" : "normal" }}>
+      <div className="ip-breadcrumb">
+        <span onClick={goRoot} className={!currentFolderId ? "ip-breadcrumb-active" : "ip-breadcrumb-link text-primary"}>
             Racine
         </span>
         
         {path.map((p, i) => (
-          <span key={p.id} style={{display: "flex", gap: 5, alignItems: "center"}}>
+          <span key={p.id} className="flex items-center gap-5">
              <span>/</span>
              {i === path.length - 1 ? (
-                 <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{p.name}</span>
+                 <span className="text-main font-bold">{p.name}</span>
              ) : (
-                 <span 
-                    style={{ cursor: "pointer", color: "var(--primary)" }} 
-                    onClick={() => goToPathIndex(p.id)}
-                 >
+                 <span className="ip-breadcrumb-link text-primary" onClick={() => goToPathIndex(p.id)}>
                     {p.name}
                  </span>
              )}
@@ -410,125 +388,117 @@ export default function ItemsPage() {
         ))}
 
         {currentFolderId && !isSelectionMode && (
-            <button className="btn-secondary" onClick={goBackOneLevel} style={{marginLeft: "auto", padding: "4px 10px", fontSize: "0.8rem"}}>
+            <button className="btn-secondary ml-auto" onClick={goBackOneLevel} style={{ padding: "4px 10px", fontSize: "0.8rem" }}>
                 Remonter
             </button>
         )}
       </div>
 
       <div className="items-grid">
-        {items.length > 0 ? items.map(renderItem) : <p style={{ color: "var(--text-muted)", width: "100%", textAlign: "center", marginTop: 40 }}>Dossier vide.</p>}
+        {items.length > 0 ? items.map(renderItem) : <p className="w-full text-center text-muted mt-20">Dossier vide.</p>}
       </div>
 
+      {/* --- MODALE CRÉATION --- */}
       {showCreateModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: 400 }}>
-            <h3 style={{marginTop:0}}>Creer un element</h3>
+          <div className="modal-content modal-sm">
+            <h3 className="m-0 mb-15">Créer un élément</h3>
             <form onSubmit={handleCreateItem}>
-              <label style={{display: "block", marginBottom: 5}}>Nom</label>
-              <input type="text" value={newItem.nom} onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })} autoFocus style={{width: "93%", marginBottom: 15, padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} />
+              <div className="form-group">
+                  <label className="form-label">Nom</label>
+                  <input type="text" className="input-field w-full" value={newItem.nom} onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })} autoFocus />
+              </div>
 
-              <label style={{display: "block", marginBottom: 5}}>Type</label>
-              <div style={{display: "flex", gap: 10, marginBottom: 15}}>
-                  <button type="button" className={newItem.type === "folder" ? "btn-primary" : "btn-secondary"} onClick={() => setNewItem({...newItem, type: "folder"})} style={{flex:1}}>Dossier</button>
-                  <button type="button" className={newItem.type === "deck" ? "btn-primary" : "btn-secondary"} onClick={() => setNewItem({...newItem, type: "deck"})} style={{flex:1}}>Deck</button>
+              <div className="form-group">
+                  <label className="form-label">Type</label>
+                  <div className="flex gap-10">
+                      <button type="button" className={newItem.type === "folder" ? "btn-primary flex-1" : "btn-secondary flex-1"} onClick={() => setNewItem({...newItem, type: "folder"})}>Dossier</button>
+                      <button type="button" className={newItem.type === "deck" ? "btn-primary flex-1" : "btn-secondary flex-1"} onClick={() => setNewItem({...newItem, type: "deck"})}>Deck</button>
+                  </div>
               </div>
 
               {newItem.type === "deck" && (
-                  <div style={{marginBottom: 15}}>
-                      <label style={{display: "block", marginBottom: 5}}>Format</label>
-                      <select value={newItem.format} onChange={(e) => setNewItem({...newItem, format: e.target.value})} style={{width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}>
+                  <div className="form-group">
+                      <label className="form-label">Format</label>
+                      <select className="input-field w-full" value={newItem.format} onChange={(e) => setNewItem({...newItem, format: e.target.value})}>
                           {Object.entries(DECK_FORMATS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
                       </select>
                   </div>
               )}
 
-              <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
+              <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>Annuler</button>
-                <button type="submit" className="btn-primary">Creer</button>
+                <button type="submit" className="btn-primary">Créer</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* --- MODALE IMPORT DECK --- */}
       {showImportDeckModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: 500 }}>
+          <div className="modal-content modal-md">
             {isImporting ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0" }}>
+                <div className="flex-col items-center py-12">
                     <Loader />
-                    <p style={{ marginTop: "20px", color: "var(--text-main)", fontWeight: "bold" }}>Analyse et construction du deck en cours...</p>
+                    <p className="mt-20 text-main font-bold">Analyse et construction du deck en cours...</p>
                 </div>
             ) : importResult ? (
                 <div>
-                    <h3 style={{marginTop:0, color: "var(--primary)"}}>Importation partielle</h3>
-                    <p style={{color: "var(--text-main)", fontSize: "0.9rem", lineHeight: 1.5}}>Le deck a bien ete cree, mais certaines cartes n'ont pas pu etre trouvees dans la base de donnees (nom incorrect ou syntaxe non reconnue) :</p>
+                    <h3 className="m-0 text-primary mb-10">Importation partielle</h3>
+                    <p className="text-main text-sm mb-15" style={{ lineHeight: 1.5 }}>Le deck a bien été créé, mais certaines cartes n'ont pas pu être trouvées dans la base de données (nom incorrect ou syntaxe non reconnue) :</p>
                     
-                    <div style={{ background: "var(--bg-input)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", maxHeight: "200px", overflowY: "auto", marginBottom: "15px", fontSize: "0.85rem", color: "var(--danger)" }}>
-                        <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                    <div className="ip-import-result">
+                        <ul className="m-0 pl-20">
                             {importResult.map((c, i) => (
-                                <li key={i} style={{ marginBottom: "4px" }}>
-                                    <strong>{c.qty}x</strong> {c.name} <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({c.zone})</span>
+                                <li key={i} className="mb-5">
+                                    <strong>{c.qty}x</strong> {c.name} <span className="text-muted text-sm">({c.zone})</span>
                                 </li>
                             ))}
                         </ul>
                     </div>
                     
-                    <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+                    <div className="modal-actions">
                         <button type="button" className="btn-primary" onClick={closeImportModal}>Terminer</button>
                     </div>
                 </div>
             ) : (
                 <>
-                    <h3 style={{marginTop:0}}>Importer une liste de Deck</h3>
+                    <h3 className="m-0 mb-15">Importer une liste de Deck</h3>
                     <form onSubmit={handleImportDeck}>
-                      <div style={{display: "flex", gap: "10px", marginBottom: "15px"}}>
+                      <div className="flex gap-10 mb-15">
                           <div style={{flex: 2}}>
-                              <label style={{display: "block", marginBottom: 5}}>Nom du deck</label>
-                              <input 
-                                  type="text" 
-                                  value={importDeckData.nom} 
-                                  onChange={(e) => setImportDeckData({ ...importDeckData, nom: e.target.value })} 
-                                  autoFocus 
-                                  style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} 
-                              />
+                              <label className="form-label">Nom du deck</label>
+                              <input type="text" className="input-field w-full" value={importDeckData.nom} onChange={(e) => setImportDeckData({ ...importDeckData, nom: e.target.value })} autoFocus />
                           </div>
-                          <div style={{flex: 1}}>
-                              <label style={{display: "block", marginBottom: 5}}>Format</label>
-                              <select 
-                                  value={importDeckData.format} 
-                                  onChange={(e) => setImportDeckData({...importDeckData, format: e.target.value})} 
-                                  style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}
-                              >
+                          <div className="flex-1">
+                              <label className="form-label">Format</label>
+                              <select className="input-field w-full" value={importDeckData.format} onChange={(e) => setImportDeckData({...importDeckData, format: e.target.value})}>
                                   {Object.entries(DECK_FORMATS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
                               </select>
                           </div>
                       </div>
 
-                      <div style={{marginBottom: 15}}>
-                          <label style={{display: "block", marginBottom: 5}}>Fichier (.txt, .csv, .dek)</label>
-                          <input 
-                              type="file" 
-                              accept=".txt,.csv,.dek" 
-                              onChange={handleImportFileChange} 
-                              style={{width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}} 
-                          />
+                      <div className="form-group">
+                          <label className="form-label">Fichier (.txt, .csv, .dek)</label>
+                          <input type="file" accept=".txt,.csv,.dek" className="input-field w-full" onChange={handleImportFileChange} />
                       </div>
 
-                      <div style={{textAlign: "center", marginBottom: "15px", color: "var(--text-muted)", fontSize: "0.9rem", fontWeight: "bold"}}>OU</div>
+                      <div className="text-center mb-15 text-muted text-sm font-bold">OU</div>
 
-                      <div style={{marginBottom: 15}}>
-                          <label style={{display: "block", marginBottom: 5}}>Liste (Copier/Coller)</label>
+                      <div className="form-group">
+                          <label className="form-label">Liste (Copier/Coller)</label>
                           <textarea 
+                              className="input-field w-full"
+                              style={{ height: "150px", resize: "vertical" }}
                               value={importDeckData.decklist} 
                               onChange={(e) => setImportDeckData({ ...importDeckData, decklist: e.target.value })} 
                               placeholder="Ex:&#10;4 Lightning Bolt&#10;1 Black Lotus"
-                              style={{width: "100%", height: "150px", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)", resize: "vertical"}}
                           />
                       </div>
 
-                      <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
+                      <div className="modal-actions">
                         <button type="button" className="btn-secondary" onClick={closeImportModal}>Annuler</button>
                         <button type="submit" className="btn-primary" disabled={!importDeckData.nom.trim() || !importDeckData.decklist.trim()}>
                             Importer
@@ -541,65 +511,65 @@ export default function ItemsPage() {
         </div>
       )}
 
+      {/* --- MODALE SUPPRESSION --- */}
       {showDeleteModal && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{width: 450, border: "1px solid var(--danger)"}}>
-                  <h3 style={{marginTop:0, color: "var(--danger)"}}>Suppression definitive</h3>
+              <div className="modal-content ip-modal-danger modal-md">
+                  <h3 className="m-0 text-danger mb-10">Suppression définitive</h3>
                   
                   {deleteType === "single" ? (
                       <>
                           <p>Voulez-vous vraiment supprimer <strong>{itemToDelete?.nom}</strong> ?</p>
                           {itemToDelete?.type === "folder" && (
-                              <p style={{fontSize: "0.85rem", color: "var(--text-muted)"}}>Attention : Tout le contenu de ce dossier sera perdu a jamais.</p>
+                              <p className="text-sm text-muted">Attention : Tout le contenu de ce dossier sera perdu à jamais.</p>
                           )}
-                          <div style={{ marginBottom: 20, marginTop: 15 }}>
-                              <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>{itemToDelete?.nom}</strong> pour confirmer :</label>
+                          <div className="mt-15 mb-20">
+                              <label className="form-label text-sm font-normal">Veuillez taper <strong>{itemToDelete?.nom}</strong> pour confirmer :</label>
                               <input 
                                   type="text" 
+                                  className={`input-field w-full ${deleteInput === itemToDelete?.nom ? "input-success" : ""}`}
                                   placeholder={itemToDelete?.nom} 
                                   value={deleteInput} 
                                   onChange={e => setDeleteInput(e.target.value)} 
                                   autoFocus
-                                  style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteInput === itemToDelete?.nom ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} 
                               />
                           </div>
                       </>
                   ) : (
                       <>
-                          <p>Voulez-vous vraiment supprimer les <strong>{selectedItems.length} elements</strong> selectionnes ?</p>
+                          <p className="mb-10">Voulez-vous vraiment supprimer les <strong>{selectedItems.length} éléments</strong> sélectionnés ?</p>
                           
-                          <div style={{ background: "var(--bg-input)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", maxHeight: "120px", overflowY: "auto", marginBottom: "15px", fontSize: "0.85rem", color: "var(--text-main)" }}>
-                              <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                          <div className="ip-delete-list">
+                              <ul className="m-0 pl-20">
                                   {items.filter(item => selectedItems.includes(item.id)).map(item => (
-                                      <li key={item.id} style={{ marginBottom: "4px" }}>
-                                          {item.nom} <span style={{ color: "var(--text-muted)" }}>({item.type === "folder" ? "Dossier" : "Deck"})</span>
+                                      <li key={item.id} className="mb-5">
+                                          {item.nom} <span className="text-muted">({item.type === "folder" ? "Dossier" : "Deck"})</span>
                                       </li>
                                   ))}
                               </ul>
                           </div>
                           
-                          <p style={{fontSize: "0.85rem", color: "var(--text-muted)", marginTop: 0}}>Attention : Le contenu des dossiers selectionnes sera egalement perdu a jamais.</p>
-                          <div style={{ marginBottom: 20, marginTop: 15 }}>
-                              <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
+                          <p className="text-sm text-muted mt-0">Attention : Le contenu des dossiers sélectionnés sera également perdu à jamais.</p>
+                          <div className="mt-15 mb-20">
+                              <label className="form-label text-sm font-normal">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
                               <input 
                                   type="text" 
+                                  className={`input-field w-full ${deleteInput === "SUPPRIMER" ? "input-success" : ""}`}
                                   placeholder="SUPPRIMER" 
                                   value={deleteInput} 
                                   onChange={e => setDeleteInput(e.target.value)} 
                                   autoFocus
-                                  style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteInput === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} 
                               />
                           </div>
                       </>
                   )}
 
-                  <div style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20}}>
+                  <div className="modal-actions">
                       <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Annuler</button>
                       
                       {deleteType === "single" ? (
                           <button 
-                              className="btn-secondary" 
-                              style={{ background: deleteInput === itemToDelete?.nom ? "var(--danger)" : "var(--bg-input)", color: deleteInput === itemToDelete?.nom ? "white" : "var(--text-muted)", border: "none", cursor: deleteInput === itemToDelete?.nom ? "pointer" : "not-allowed" }} 
+                              className="btn-danger-filled" 
                               disabled={deleteInput !== itemToDelete?.nom} 
                               onClick={handleDeleteItem}
                           >
@@ -607,8 +577,7 @@ export default function ItemsPage() {
                           </button>
                       ) : (
                           <button 
-                              className="btn-secondary" 
-                              style={{ background: deleteInput === "SUPPRIMER" ? "var(--danger)" : "var(--bg-input)", color: deleteInput === "SUPPRIMER" ? "white" : "var(--text-muted)", border: "none", cursor: deleteInput === "SUPPRIMER" ? "pointer" : "not-allowed" }} 
+                              className="btn-danger-filled" 
                               disabled={deleteInput !== "SUPPRIMER"} 
                               onClick={executeBulkDelete}
                           >
@@ -620,18 +589,15 @@ export default function ItemsPage() {
           </div>
       )}
 
+      {/* --- MODALE DÉPLACEMENT --- */}
       {showMoveModal && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{width: 400}}>
-                  <h3 style={{marginTop:0}}>Deplacer la selection</h3>
+              <div className="modal-content modal-sm">
+                  <h3 className="m-0 mb-15">Déplacer la sélection</h3>
                   <form onSubmit={handleBulkMove}>
-                      <div style={{ marginBottom: 20 }}>
-                          <label style={{display: "block", marginBottom: 5}}>Vers le dossier :</label>
-                          <select 
-                              value={moveTargetId} 
-                              onChange={(e) => setMoveTargetId(e.target.value)}
-                              style={{width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)"}}
-                          >
+                      <div className="form-group">
+                          <label className="form-label">Vers le dossier :</label>
+                          <select className="input-field w-full" value={moveTargetId} onChange={(e) => setMoveTargetId(e.target.value)}>
                               <option value="">Racine (Aucun dossier)</option>
                               {allFolders
                                   .filter(f => !selectedItems.includes(f.id)) 
@@ -640,21 +606,22 @@ export default function ItemsPage() {
                               ))}
                           </select>
                       </div>
-                      <div style={{display: "flex", justifyContent: "flex-end", gap: 10}}>
+                      <div className="modal-actions">
                           <button type="button" className="btn-secondary" onClick={() => setShowMoveModal(false)}>Annuler</button>
-                          <button type="submit" className="btn-primary">Deplacer</button>
+                          <button type="submit" className="btn-primary">Déplacer</button>
                       </div>
                   </form>
               </div>
           </div>
       )}
 
+      {/* --- MODALES INFO / ERREUR --- */}
       {errorModal.isOpen && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{width: 350, border: "1px solid var(--danger)"}}>
-                  <h3 style={{marginTop:0, color: "var(--danger)"}}>Erreur</h3>
-                  <p style={{color: "var(--text-main)", lineHeight: 1.5}}>{errorModal.message}</p>
-                  <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+              <div className="modal-content ip-modal-danger modal-sm">
+                  <h3 className="m-0 text-danger mb-10">Erreur</h3>
+                  <p className="text-main" style={{ lineHeight: 1.5 }}>{errorModal.message}</p>
+                  <div className="modal-actions mt-20">
                       <button className="btn-secondary" onClick={() => setErrorModal({ isOpen: false, message: "" })}>Fermer</button>
                   </div>
               </div>
@@ -663,10 +630,10 @@ export default function ItemsPage() {
       
       {infoModal.isOpen && (
           <div className="modal-overlay">
-              <div className="modal-content" style={{width: 350, border: "1px solid var(--success)"}}>
-                  <h3 style={{marginTop:0, color: "var(--success)"}}>{infoModal.title}</h3>
-                  <p style={{color: "var(--text-main)", lineHeight: 1.5}}>{infoModal.message}</p>
-                  <div style={{display: "flex", justifyContent: "flex-end", marginTop: 20}}>
+              <div className="modal-content ip-modal-success modal-sm">
+                  <h3 className="m-0 text-success mb-10">{infoModal.title}</h3>
+                  <p className="text-main" style={{ lineHeight: 1.5 }}>{infoModal.message}</p>
+                  <div className="modal-actions mt-20">
                       <button className="btn-primary" onClick={() => setInfoModal({ isOpen: false, type: "info", title: "", message: "" })}>Fermer</button>
                   </div>
               </div>

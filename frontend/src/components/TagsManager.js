@@ -17,7 +17,7 @@ export default function TagsManager({ onClose }) {
     const [error, setError] = useState("");
 
     const [tagName, setTagName] = useState("");
-    const [tagColor, setTagColor] = useState("#FF9800"); // NOUVEAU
+    const [tagColor, setTagColor] = useState("#FF9800"); 
     const [conditions, setConditions] = useState([{ field: "type_line", operator: "contains", value: "" }]);
     const [ruleLogic, setRuleLogic] = useState("AND"); 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +99,7 @@ export default function TagsManager({ onClose }) {
     const handleEditClick = (rule) => {
         setEditingRuleId(rule.id);
         setTagName(rule.tag_name);
-        setTagColor(rule.color || "#FF9800"); // NOUVEAU
+        setTagColor(rule.color || "#FF9800"); 
         setConditions(JSON.parse(JSON.stringify(rule.conditions)));
         setRuleLogic(rule.logic || "AND"); 
         setError("");
@@ -111,7 +111,7 @@ export default function TagsManager({ onClose }) {
     const cancelEdit = () => {
         setEditingRuleId(null);
         setTagName("");
-        setTagColor("#FF9800"); // NOUVEAU
+        setTagColor("#FF9800"); 
         setConditions([{ field: "type_line", operator: "contains", value: "" }]);
         setRuleLogic("AND"); 
         setError("");
@@ -135,7 +135,7 @@ export default function TagsManager({ onClose }) {
             const ruleData = {
                 tag_name: tagName.trim(),
                 logic: ruleLogic,
-                color: tagColor, // NOUVEAU
+                color: tagColor, 
                 conditions: conditions.map(c => ({ ...c, value: c.value.trim() })) 
             };
 
@@ -202,28 +202,21 @@ export default function TagsManager({ onClose }) {
         return fields[f] || f;
     };
 
-    const sectionStyle = {
-        background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "12px", 
-        padding: "25px", marginBottom: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-    };
-
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div 
                 id="tags-modal-container"
-                className="modal-content" 
-                style={{ width: "900px", maxWidth: "95%", maxHeight: "90vh", overflowY: "auto", padding: "30px", textAlign: "left" }} 
+                className="modal-content tm-modal-content" 
                 onClick={e => e.stopPropagation()}
             >
-                
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "15px", marginBottom: "20px" }}>
+                <div className="tm-header">
                     <h2 style={{ margin: 0, color: "var(--primary)" }}>Automatisation des Tags</h2>
                     <button onClick={onClose} className="btn-secondary" style={{ padding: "8px 15px", fontWeight: "bold" }}>
                         Fermer
                     </button>
                 </div>
 
-                <div style={{ padding: "12px 15px", background: "rgba(255, 152, 0, 0.1)", border: "1px solid var(--primary)", borderRadius: "8px", marginBottom: "25px", color: "var(--text-main)", fontSize: "0.95rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div className="tm-info-banner">
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <span>
                             Les modifications effectuées ici ne s'appliqueront à vos cartes qu'après avoir synchronisé votre collection depuis le bouton <strong>"Mettre à jour les données"</strong> de votre profil.
@@ -237,7 +230,7 @@ export default function TagsManager({ onClose }) {
                     </div>
                 )}
 
-                <div style={{...sectionStyle, border: editingRuleId ? "2px solid var(--primary)" : "1px solid var(--border)"}}>
+                <div className={`tm-section ${editingRuleId ? "editing" : ""}`}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                         <h3 style={{ marginTop: 0, color: "var(--text-main)", marginBottom: 0 }}>
                             {editingRuleId ? "Modifier la règle" : "Créer une nouvelle règle"}
@@ -249,8 +242,8 @@ export default function TagsManager({ onClose }) {
                         )}
                     </div>
                     
-                    <form onSubmit={handleSubmitRule} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "var(--bg-input)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                    <form onSubmit={handleSubmitRule} className="tm-form">
+                        <div className="tm-condition-box">
                             <label style={{ fontSize: "0.95rem", color: "var(--text-main)", fontWeight: "bold", marginBottom: "5px" }}>
                                 Conditions de la règle
                             </label>
@@ -262,24 +255,19 @@ export default function TagsManager({ onClose }) {
                                 const isDateField = cond.field === "date_added";
 
                                 return (
-                                    <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                                    <div key={index} className="tm-condition-row">
                                         {index > 0 && (
                                             <button 
                                                 type="button" 
                                                 onClick={() => setRuleLogic(ruleLogic === "AND" ? "OR" : "AND")}
-                                                style={{ 
-                                                    background: ruleLogic === "AND" ? "var(--primary)" : "#2196F3", 
-                                                    color: "white", border: "none", padding: "4px 10px", 
-                                                    borderRadius: "4px", cursor: "pointer", fontWeight: "bold",
-                                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
-                                                }}
+                                                className={`tm-btn-logic ${ruleLogic === "AND" ? "and" : "or"}`}
                                                 title="Cliquer pour basculer la règle entière entre ET / OU"
                                             >
                                                 {ruleLogic === "AND" ? "ET" : "OU"}
                                             </button>
                                         )}
                                         
-                                        <select value={cond.field} onChange={(e) => updateCondition(index, "field", e.target.value)} className="custom-select" style={{ flex: 1, minWidth: "150px" }}>
+                                        <select value={cond.field} onChange={(e) => updateCondition(index, "field", e.target.value)} className="custom-select tm-input-field">
                                             <option value="type_line">Type</option>
                                             <option value="oracle_text">Texte de la carte</option>
                                             <option value="name">Nom de la carte</option>
@@ -294,7 +282,7 @@ export default function TagsManager({ onClose }) {
                                         </select>
                                         
                                         {!isColorField && (
-                                            <select value={cond.operator} onChange={(e) => updateCondition(index, "operator", e.target.value)} className="custom-select" style={{ flex: 1, minWidth: "120px" }}>
+                                            <select value={cond.operator} onChange={(e) => updateCondition(index, "operator", e.target.value)} className="custom-select tm-input-operator">
                                                 {isTextField && (
                                                     <>
                                                         <option value="contains">Contient</option>
@@ -314,12 +302,13 @@ export default function TagsManager({ onClose }) {
                                         )}
 
                                         {isColorField ? (
-                                            <div style={{ display: "flex", gap: "8px", flex: 2, minWidth: "150px", background: "var(--bg-main)", padding: "5px 10px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                                            <div className="tm-mana-bg">
                                                 {Object.keys(MANA_SYMBOLS).map(c => {
                                                     const isSelected = cond.value.split(",").includes(c);
                                                     return (
                                                         <img key={c} src={MANA_SYMBOLS[c]} alt={c} onClick={() => toggleConditionColor(index, c)}
-                                                            style={{ width: "26px", height: "26px", cursor: "pointer", borderRadius: "50%", border: isSelected ? "2px solid var(--primary)" : "2px solid transparent", opacity: isSelected ? 1 : 0.4, transition: "all 0.2s" }}
+                                                            className="tm-mana-icon"
+                                                            style={{ border: isSelected ? "2px solid var(--primary)" : "2px solid transparent", opacity: isSelected ? 1 : 0.4 }}
                                                         />
                                                     );
                                                 })}
@@ -330,8 +319,7 @@ export default function TagsManager({ onClose }) {
                                                 value={cond.value} 
                                                 onChange={(e) => updateCondition(index, "value", e.target.value)} 
                                                 placeholder={isNumericField ? "Ex: 10" : isDateField ? "" : "Ex: creature"} 
-                                                className="custom-input" 
-                                                style={{ flex: 2, minWidth: "150px", padding: "10px", colorScheme: "dark" }}
+                                                className="custom-input tm-input-value" 
                                             />
                                         ) : null}
 
@@ -344,12 +332,12 @@ export default function TagsManager({ onClose }) {
                                 );
                             })}
 
-                            <button type="button" onClick={addCondition} style={{ alignSelf: "flex-start", background: "transparent", border: "1px dashed var(--primary)", color: "var(--primary)", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem", marginTop: "5px" }}>
+                            <button type="button" onClick={addCondition} className="tm-btn-add-cond">
                                 + Ajouter une condition
                             </button>
                         </div>
 
-                        <div style={{ display: "flex", gap: "15px", alignItems: "flex-end" }}>
+                        <div className="tm-tag-setup-row">
                             <div style={{ flex: 2 }}>
                                 <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "bold" }}>Appliquer le Tag suivant :</label>
                                 <input 
@@ -367,11 +355,11 @@ export default function TagsManager({ onClose }) {
                                     type="color" 
                                     value={tagColor} 
                                     onChange={(e) => setTagColor(e.target.value)} 
-                                    style={{ width: "60px", height: "38px", padding: "0", border: "none", cursor: "pointer", background: "transparent" }}
+                                    className="tm-color-picker"
                                 />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <button type="submit" className={editingRuleId ? "btn-secondary" : "btn-primary"} style={{ width: "100%", padding: "8px 12px", fontSize: "0.95rem", borderColor: editingRuleId ? "var(--primary)" : "", color: editingRuleId ? "var(--primary)" : "" }} disabled={isSubmitting}>
+                                <button type="submit" className={`tm-submit-btn ${editingRuleId ? "btn-secondary" : "btn-primary"}`} style={{ borderColor: editingRuleId ? "var(--primary)" : "", color: editingRuleId ? "var(--primary)" : "" }} disabled={isSubmitting}>
                                     {isSubmitting ? "Enregistrement..." : (editingRuleId ? "Mettre à jour" : "Sauvegarder la règle")}
                                 </button>
                             </div>
@@ -379,27 +367,27 @@ export default function TagsManager({ onClose }) {
                     </form>
                 </div>
 
-                <div style={sectionStyle}>
+                <div className="tm-section" style={{ marginBottom: 0 }}>
                     <h3 style={{ marginTop: 0, color: "var(--text-main)", marginBottom: "20px" }}>Vos règles actives ({rules.length})</h3>
                     
                     {loading ? (
                         <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>Chargement...</div>
                     ) : rules.length === 0 ? (
-                        <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px", background: "var(--bg-input)", borderRadius: "8px" }}>
+                        <div className="tm-empty-rules">
                             Aucune règle configurée.
                         </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                        <div className="tm-rules-list">
                             {rules.map((rule) => (
-                                <div key={rule.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "stretch", background: "var(--bg-input)", padding: "15px", borderRadius: "8px", border: "1px solid", borderColor: editingRuleId === rule.id ? "var(--primary)" : "var(--border)" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
+                                <div key={rule.id} className={`tm-rule-card ${editingRuleId === rule.id ? "editing" : ""}`}>
+                                    <div className="tm-rule-left">
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <span style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Appliquer le tag :</span>
                                             <span style={{ background: rule.color || "var(--primary)", color: "white", padding: "4px 10px", borderRadius: "4px", fontSize: "0.9rem", fontWeight: "bold", letterSpacing: "1px" }}>
                                                 {rule.tag_name.toUpperCase()}
                                             </span>
                                         </div>
-                                        <div style={{ paddingLeft: "10px", borderLeft: "2px solid var(--border)" }}>
+                                        <div className="tm-rule-conditions">
                                             {rule.conditions.map((c, i) => {
                                                 const isColorField = c.field === "color_exact" || c.field === "color_approx";
                                                 return (
@@ -416,17 +404,11 @@ export default function TagsManager({ onClose }) {
                                             })}
                                         </div>
                                     </div>
-                                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px", borderLeft: "1px solid var(--border)", paddingLeft: "15px", marginLeft: "15px" }}>
-                                        <button 
-                                            onClick={() => handleEditClick(rule)}
-                                            style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: "bold", fontSize: "0.9rem", padding: "5px" }}
-                                        >
+                                    <div className="tm-rule-actions">
+                                        <button onClick={() => handleEditClick(rule)} className="tm-btn-text edit">
                                             Modifier
                                         </button>
-                                        <button 
-                                            onClick={() => handleDeleteRule(rule.id)}
-                                            style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontWeight: "bold", fontSize: "0.9rem", padding: "5px" }}
-                                        >
+                                        <button onClick={() => handleDeleteRule(rule.id)} className="tm-btn-text delete">
                                             Supprimer
                                         </button>
                                     </div>

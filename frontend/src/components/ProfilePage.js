@@ -53,7 +53,6 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const [deleteCollectionConfirm, setDeleteCollectionConfirm] = useState("");
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
 
-  // Etats pour le MFA
   const [mfaSetupData, setMfaSetupData] = useState(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaDisablePassword, setMfaDisablePassword] = useState("");
@@ -308,7 +307,6 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
       } catch (err) { showNotification("Erreur serveur", "error"); }
   };
 
-  // --- FONCTIONS MFA ---
   const handleInitiateMfa = async () => {
       try {
           const res = await fetch(`${API_BASE_URL}/auth/me/mfa/setup`, { credentials: "include" });
@@ -366,120 +364,112 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
   const defaultAvatar = "https://cards.scryfall.io/art_crop/front/0/0/00020b05-ecb9-4603-8cc1-8cfa7a14befc.jpg";
 
-  const sectionStyle = {
-      background: "var(--bg-input)", 
-      padding: "30px", 
-      borderRadius: "12px", 
-      border: "1px solid var(--border)", 
-      boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-      marginBottom: "25px",
-  };
-
   return (
-    <div style={{ padding: "40px", display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column" }}>
+    <div className="pp-container">
+      <div className="pp-content">
 
-        <div style={sectionStyle}>
-            <h3 style={{ margin: "0 0 20px 0", color: "var(--primary)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", textAlign: "left" }}>
+        <div className="pp-section">
+            <h3 className="pp-section-title">
                 Informations Générales
             </h3>
 
-            <div style={{ position: "relative", width: "140px", height: "140px", margin: "0 auto 20px auto" }}>
-                <img src={user?.avatar || defaultAvatar} alt="Avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "4px solid var(--primary)", backgroundColor: "var(--bg-main)" }} />
-                <button onClick={() => setActiveModal("avatar")} style={{ position: "absolute", bottom: "0", right: "-10px", background: "var(--primary)", color: "var(--bg-main)", border: "4px solid var(--bg-input)", borderRadius: "20px", padding: "4px 12px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem", boxShadow: "0 2px 5px rgba(0,0,0,0.3)" }}>
+            <div className="pp-avatar-wrapper">
+                <img src={user?.avatar || defaultAvatar} alt="Avatar" className="pp-avatar-img" />
+                <button onClick={() => setActiveModal("avatar")} className="pp-avatar-btn">
                     Modifier
                 </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "15px", marginBottom: "25px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+            <div className="pp-info-container">
+                <div className="pp-info-row">
                     <div></div>
-                    <h2 style={{ color: "var(--text-main)", margin: "0", fontSize: "2rem", textAlign: "center" }}>{user?.nom}</h2>
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <button onClick={() => setActiveModal("nom")} style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Modifier</button>
+                    <h2 className="pp-info-name">{user?.nom}</h2>
+                    <div className="pp-info-edit-wrapper">
+                        <button onClick={() => setActiveModal("nom")} className="pp-info-edit-btn">Modifier</button>
                     </div>
                 </div>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+                <div className="pp-info-row">
                     <div></div>
-                    <p style={{ color: "var(--text-muted)", margin: "0", fontSize: "1rem", textAlign: "center" }}>{user?.email}</p>
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <button onClick={() => setActiveModal("email")} style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Modifier</button>
+                    <p className="pp-info-email">{user?.email}</p>
+                    <div className="pp-info-edit-wrapper">
+                        <button onClick={() => setActiveModal("email")} className="pp-info-edit-btn">Modifier</button>
                     </div>
                 </div>
             </div>
 
-            <button onClick={() => setActiveModal("password")} className="btn-secondary" style={{ width: "100%", padding: "12px", borderStyle: "dashed", borderColor: "var(--text-muted)", marginBottom: "15px" }}>
+            <button onClick={() => setActiveModal("password")} className="btn-secondary pp-btn-dashed">
                 Changer le mot de passe
             </button>
 
             {/* BLOC MFA */}
-            <div style={{ padding: "15px", borderRadius: "8px", background: user?.mfa_enabled ? "rgba(76, 175, 80, 0.05)" : "rgba(255, 152, 0, 0.05)", border: `1px solid ${user?.mfa_enabled ? "var(--success)" : "var(--primary)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div className={`pp-mfa-box ${user?.mfa_enabled ? "pp-mfa-box-enabled" : "pp-mfa-box-disabled"}`}>
                 <div>
-                    <h4 style={{ margin: "0 0 5px 0", color: "var(--text-main)", fontSize: "1rem" }}>Double Authentification (A2F)</h4>
-                    <p style={{ margin: 0, fontSize: "0.85rem", color: user?.mfa_enabled ? "var(--success)" : "var(--text-muted)" }}>
+                    <h4 className="pp-mfa-title">Double Authentification (A2F)</h4>
+                    <p className={`pp-mfa-desc ${user?.mfa_enabled ? "pp-mfa-desc-enabled" : "pp-mfa-desc-disabled"}`}>
                         {user?.mfa_enabled ? "L'A2F est activée et sécurise votre compte." : "Protégez votre compte avec un code à 6 chiffres."}
                     </p>
                 </div>
                 {user?.mfa_enabled ? (
-                    <button onClick={() => setActiveModal("disableMfa")} className="btn-secondary" style={{ borderColor: "var(--danger)", color: "var(--danger)" }}>Désactiver</button>
+                    <button onClick={() => setActiveModal("disableMfa")} className="btn-secondary pp-mfa-disable-btn">Désactiver</button>
                 ) : (
                     <button onClick={handleInitiateMfa} className="btn-primary">Activer</button>
                 )}
             </div>
         </div>
 
-        <div style={sectionStyle}>
-            <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", textAlign: "left" }}>
+        <div className="pp-section">
+            <h3 className="pp-section-title">
                 Gestion de la Collection
             </h3>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ position: "relative", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--primary)" }}>
+            <div className="pp-collection-actions">
+                <div className="pp-update-wrapper">
                     {isUpdatingCollection && (
-                        <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: `${updateProgress}%`, background: "var(--primary)", opacity: 0.15, transition: "width 0.3s ease" }} />
+                        <div className="pp-update-progress" style={{ width: `${updateProgress}%` }} />
                     )}
                     
                     <button 
                         onClick={handleUpdateCollection} 
                         disabled={isUpdatingCollection} 
-                        style={{ width: "100%", padding: "12px", background: "transparent", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer" }}
+                        className="pp-update-btn"
+                        style={{ cursor: isUpdatingCollection ? "not-allowed" : "pointer" }}
                     >
-                        <span style={{ color: "var(--text-main)", fontSize: "1rem" }}>Mettre à jour les données (Prix, légalités...)</span>
-                        <span style={{ color: "var(--primary)", fontWeight: "bold" }}>
+                        <span className="pp-update-text">Mettre à jour les données (Prix, légalités...)</span>
+                        <span className="pp-update-pct">
                             {isUpdatingCollection ? `${updateProgress}%` : "Lancer"}
                         </span>
                     </button>
                 </div>
 
-                <button onClick={() => setActiveModal("deleteCollection")} className="btn-secondary" style={{ width: "100%", padding: "12px", borderColor: "var(--danger)", color: "var(--danger)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button onClick={() => setActiveModal("deleteCollection")} className="btn-secondary pp-delete-coll-btn">
                     <span>Vider toute ma collection</span>
-                    <span style={{ fontWeight: "bold" }}>Supprimer</span>
+                    <span>Supprimer</span>
                 </button>
             </div>
         </div>
 
-        <div style={sectionStyle}>
-            <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", textAlign: "left" }}>
+        <div className="pp-section">
+            <h3 className="pp-section-title">
                 Préférences d'affichage
             </h3>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-main)" }}>Apparence de l'application :</span>
-                <button onClick={toggleTheme} className="btn-secondary" style={{ padding: "8px 15px" }}>
+            <div className="pp-theme-row">
+                <span className="pp-theme-text">Apparence de l'application :</span>
+                <button onClick={toggleTheme} className="btn-secondary pp-theme-btn">
                     {theme === "light" ? "Passer en Mode Sombre" : "Passer en Mode Clair"}
                 </button>
             </div>
         </div>
 
-        <div style={{ ...sectionStyle, border: "1px solid var(--danger)", marginBottom: "0" }}>
-            <h3 style={{ margin: "0 0 20px 0", color: "var(--danger)", borderBottom: "1px solid var(--border)", paddingBottom: "10px", textAlign: "left" }}>
+        <div className="pp-section pp-danger-section">
+            <h3 className="pp-danger-title">
                 Zone de Danger
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <button onClick={handleLogout} className="btn-secondary" style={{ width: "100%", padding: "12px", fontWeight: "bold", display: "flex", justifyContent: "center" }}>
+            <div className="pp-danger-actions">
+                <button onClick={handleLogout} className="btn-secondary pp-logout-btn">
                     Se déconnecter
                 </button>
-                <button onClick={() => setActiveModal("deleteAccount")} className="btn-primary" style={{ width: "100%", background: "var(--danger)", color: "white", border: "none", padding: "12px", fontWeight: "bold", display: "flex", justifyContent: "center" }}>
+                <button onClick={() => setActiveModal("deleteAccount")} className="btn-primary pp-delete-acc-btn">
                     Supprimer mon compte définitivement
                 </button>
             </div>
@@ -489,16 +479,15 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {/* --- MODALES --- */}
       
-      {/* MODALE AVATAR COMPLETEMENT RESTAUREE */}
       {activeModal === "avatar" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "650px", maxWidth: "90%", display: "flex", flexDirection: "column", maxHeight: "85vh" }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content pp-modal-avatar-content" onClick={e => e.stopPropagation()}>
             
             {imageToCrop ? (
-                <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                    <h3 style={{ marginTop: 0, color: "var(--primary)", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>Cadrer votre avatar</h3>
+                <div className="pp-modal-avatar-wrapper">
+                    <h3 className="pp-modal-avatar-title">Cadrer votre avatar</h3>
                     
-                    <div style={{ position: "relative", width: "100%", height: "350px", background: "#333", borderRadius: "8px", overflow: "hidden" }}>
+                    <div className="pp-cropper-container">
                         <Cropper
                             image={imageToCrop}
                             crop={crop}
@@ -512,48 +501,48 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                         />
                     </div>
                     
-                    <div style={{ marginTop: "20px", display: "flex", alignItems: "center", gap: "15px" }}>
-                        <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Zoom :</span>
-                        <input type="range" min={1} max={3} step={0.1} value={zoom} onChange={(e) => setZoom(e.target.value)} style={{ flex: 1 }} />
+                    <div className="pp-zoom-row">
+                        <span className="pp-zoom-label">Zoom :</span>
+                        <input type="range" min={1} max={3} step={0.1} value={zoom} onChange={(e) => setZoom(e.target.value)} className="pp-zoom-input" />
                     </div>
 
-                    <div style={{ textAlign: "right", marginTop: "30px", paddingTop: "15px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
+                    <div className="pp-modal-footer-between">
                         <button className="btn-secondary" onClick={() => setImageToCrop(null)}>Retour</button>
                         <button className="btn-primary" onClick={handleConfirmCrop} disabled={isCropping}>{isCropping ? "Traitement..." : "Valider le cadrage"}</button>
                     </div>
                 </div>
             ) : (
                 <>
-                    <h3 style={{ marginTop: 0, color: "var(--primary)", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>Modifier la photo de profil</h3>
+                    <h3 className="pp-modal-avatar-title">Modifier la photo de profil</h3>
                     
-                    <div style={{ marginBottom: "25px", background: "var(--bg-main)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                        <h4 style={{ marginTop: 0, color: "var(--text-main)", fontSize: "1rem", marginBottom: "10px" }}>Option 1 : Importer depuis votre ordinateur</h4>
-                        <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleLocalImageUpload} style={{ color: "var(--text-main)" }} />
+                    <div className="pp-upload-box">
+                        <h4 className="pp-upload-title">Option 1 : Importer depuis votre ordinateur</h4>
+                        <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleLocalImageUpload} className="pp-upload-input" />
                     </div>
 
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                        <h4 style={{ marginTop: 0, color: "var(--text-main)", fontSize: "1rem", marginBottom: "10px" }}>Option 2 : Choisir une illustration de carte</h4>
-                        <form onSubmit={handleAvatarSearch} style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-                        <input type="text" value={cardSearch} onChange={e => setCardSearch(e.target.value)} placeholder="Nom d'une carte (ex: Chandra)..." style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                    <div className="pp-search-wrapper">
+                        <h4 className="pp-upload-title">Option 2 : Choisir une illustration de carte</h4>
+                        <form onSubmit={handleAvatarSearch} className="pp-search-form">
+                        <input type="text" value={cardSearch} onChange={e => setCardSearch(e.target.value)} placeholder="Nom d'une carte (ex: Chandra)..." className="pp-search-input" autoFocus />
                         <button type="submit" className="btn-primary" disabled={isSearching}>{isSearching ? "..." : "Chercher"}</button>
                         </form>
 
-                        <div style={{ overflowY: "auto", flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "15px", padding: "5px" }}>
+                        <div className="pp-search-grid">
                         {avatarResults.map((c, i) => {
                             const img = c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop;
                             if (!img) return null;
                             return (
-                            <div key={i} onClick={() => setImageToCrop(`${API_BASE_URL}/auth/proxy-image?url=${encodeURIComponent(img)}`)} style={{ cursor: "pointer" }}>
-                                <img src={img} alt={c.name} title={c.name} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: "8px", border: "2px solid transparent", transition: "border 0.2s" }} onMouseOver={e => e.target.style.borderColor="var(--primary)"} onMouseOut={e => e.target.style.borderColor="transparent"} />
-                                <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                            <div key={i} onClick={() => setImageToCrop(`${API_BASE_URL}/auth/proxy-image?url=${encodeURIComponent(img)}`)} className="pp-search-item">
+                                <img src={img} alt={c.name} title={c.name} className="pp-search-item-img" />
+                                <div className="pp-search-item-label">{c.name}</div>
                             </div>
                             );
                         })}
-                        {!isSearching && cardSearch && avatarResults.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>Aucun résultat avec illustration.</div>}
+                        {!isSearching && cardSearch && avatarResults.length === 0 && <div className="pp-search-empty">Aucun résultat avec illustration.</div>}
                         </div>
                     </div>
 
-                    <div style={{ textAlign: "right", marginTop: "20px", paddingTop: "15px", borderTop: "1px solid var(--border)" }}>
+                    <div className="pp-modal-footer-right">
                         <button className="btn-secondary" onClick={closeModal}>Annuler</button>
                     </div>
                 </>
@@ -562,27 +551,26 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         </div>
       )}
 
-      {/* MODALE SETUP MFA */}
       {activeModal === "setupMfa" && mfaSetupData && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "450px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: "var(--primary)" }}>Activer la Double Authentification</h3>
-            <p style={{ color: "var(--text-main)", fontSize: "0.9rem", marginBottom: "20px" }}>
+          <div className="modal-content pp-modal-setup-mfa" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-mfa-title">Activer la Double Authentification</h3>
+            <p className="pp-modal-mfa-desc">
                 1. Scannez ce QR Code avec une application comme <strong>Google Authenticator</strong> ou <strong>Authy</strong>.
             </p>
             
-            <div style={{ background: "white", padding: "15px", display: "inline-block", borderRadius: "8px", marginBottom: "20px" }}>
+            <div className="pp-modal-mfa-qr-box">
                 <QRCodeCanvas value={mfaSetupData.uri} size={200} level={"H"} />
             </div>
 
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "20px" }}>
+            <p className="pp-modal-mfa-manual">
                 Ou saisissez ce code manuellement : <br/>
-                <strong style={{ color: "var(--text-main)", letterSpacing: "2px" }}>{mfaSetupData.secret}</strong>
+                <strong className="pp-modal-mfa-secret">{mfaSetupData.secret}</strong>
             </p>
 
             <form onSubmit={handleEnableMfa}>
-                <div style={{ textAlign: "left", marginBottom: "20px" }}>
-                    <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-main)" }}>
+                <div className="pp-modal-mfa-form">
+                    <label className="pp-modal-mfa-label">
                         2. Entrez le code à 6 chiffres généré :
                     </label>
                     <input 
@@ -591,10 +579,10 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
                         value={mfaCode} 
                         onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="123456" 
-                        style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--primary)", fontSize: "1.2rem", textAlign: "center", letterSpacing: "5px", fontWeight: "bold" }} 
+                        className="pp-modal-mfa-input" 
                     />
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <div className="pp-modal-mfa-actions">
                     <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
                     <button type="submit" className="btn-primary" disabled={mfaCode.length !== 6}>Valider et Activer</button>
                 </div>
@@ -603,43 +591,41 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         </div>
       )}
 
-      {/* MODALE DESACTIVER MFA */}
       {activeModal === "disableMfa" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "400px" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Désactiver la Double Authentification</h3>
-            <p style={{ color: "var(--text-main)", fontSize: "0.9rem", marginBottom: "20px" }}>
+          <div className="modal-content pp-modal-disable-mfa" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-disable-mfa-title">Désactiver la Double Authentification</h3>
+            <p className="pp-modal-disable-mfa-desc">
                 Désactiver l'A2F rendra votre compte vulnérable. Veuillez entrer votre mot de passe pour confirmer.
             </p>
             <form onSubmit={handleDisableMfa}>
-                <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Mot de passe actuel</label>
-                    <input type="password" required value={mfaDisablePassword} onChange={e => setMfaDisablePassword(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                <div className="pp-modal-disable-mfa-group">
+                    <label className="pp-modal-disable-mfa-label">Mot de passe actuel</label>
+                    <input type="password" required value={mfaDisablePassword} onChange={e => setMfaDisablePassword(e.target.value)} className="pp-modal-disable-mfa-input" autoFocus />
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <div className="pp-modal-mfa-actions">
                     <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
-                    <button type="submit" className="btn-primary" style={{ background: "var(--danger)", border: "none" }} disabled={!mfaDisablePassword}>Désactiver</button>
+                    <button type="submit" className="btn-secondary pp-mfa-disable-btn" disabled={!mfaDisablePassword}>Désactiver</button>
                 </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALES UPDATE, NOM, EMAIL, PASSWORD, DELETE... */}
       {activeModal === "updateCollection" && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: "450px", textAlign: "center", boxSizing: "border-box", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: "var(--primary)", marginBottom: "20px" }}>Mise à jour de la collection</h3>
-            <p style={{ fontSize: "0.9rem", color: "var(--text-main)", marginBottom: "25px" }}>Synchronisation des prix et légalités avec Scryfall...</p>
-            <div style={{ height: "20px", width: "100%", boxSizing: "border-box", background: "var(--bg-main)", borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
-                <div style={{ height: "100%", width: `${updateProgress}%`, background: "var(--primary)", transition: "width 0.3s ease" }}></div>
+          <div className="modal-content pp-modal-update-coll" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-update-coll-title">Mise à jour de la collection</h3>
+            <p className="pp-modal-update-coll-desc">Synchronisation des prix et légalités avec Scryfall...</p>
+            <div className="pp-update-coll-bar-wrapper">
+                <div className="pp-update-coll-bar-fill" style={{ width: `${updateProgress}%` }}></div>
             </div>
-            <div style={{ marginTop: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
-                <span style={{ fontWeight: "bold", color: "var(--text-main)", fontSize: "1.2rem" }}>{updateProgress}%</span>
-                <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{processedCards} / {totalCards} cartes traitées</span>
+            <div className="pp-update-coll-stats">
+                <span className="pp-update-coll-pct">{updateProgress}%</span>
+                <span className="pp-update-coll-count">{processedCards} / {totalCards} cartes traitées</span>
             </div>
-            <div style={{ marginTop: "30px", display: "flex", justifyContent: "center" }}>
-                <button className="btn-primary" onClick={closeModal} disabled={isUpdatingCollection} style={{ opacity: isUpdatingCollection ? 0.5 : 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer", padding: "10px 30px" }}>
+            <div className="pp-update-coll-footer">
+                <button className="btn-primary pp-update-coll-btn" onClick={closeModal} disabled={isUpdatingCollection} style={{ opacity: isUpdatingCollection ? 0.5 : 1, cursor: isUpdatingCollection ? "not-allowed" : "pointer" }}>
                     {isUpdatingCollection ? "Veuillez patienter..." : "Terminer"}
                 </button>
             </div>
@@ -649,14 +635,14 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {activeModal === "nom" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "400px" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Modifier le pseudo</h3>
-            <form onSubmit={handleUpdateNom} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <div className="modal-content pp-modal-form-content" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-form-title">Modifier le pseudo</h3>
+            <form onSubmit={handleUpdateNom} className="pp-modal-form-flex">
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Nouveau pseudo</label>
-                <input type="text" required value={nomData.nom} onChange={e => setNomData({nom: e.target.value})} maxLength={32} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                <label className="pp-modal-form-label">Nouveau pseudo</label>
+                <input type="text" required value={nomData.nom} onChange={e => setNomData({nom: e.target.value})} maxLength={32} className="pp-modal-form-input" autoFocus />
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div className="pp-modal-form-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
                 <button type="submit" className="btn-primary" disabled={!nomData.nom.trim()}>Valider</button>
               </div>
@@ -667,18 +653,18 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {activeModal === "email" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "400px" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Modifier l'email</h3>
-            <form onSubmit={handleUpdateEmail} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <div className="modal-content pp-modal-form-content" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-form-title">Modifier l'email</h3>
+            <form onSubmit={handleUpdateEmail} className="pp-modal-form-flex">
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Nouvelle adresse email</label>
-                <input type="email" required value={emailData.new_email} onChange={e => setEmailData({...emailData, new_email: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                <label className="pp-modal-form-label">Nouvelle adresse email</label>
+                <input type="email" required value={emailData.new_email} onChange={e => setEmailData({...emailData, new_email: e.target.value})} className="pp-modal-form-input" autoFocus />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Mot de passe actuel (Sécurité)</label>
-                <input type="password" required value={emailData.password} onChange={e => setEmailData({...emailData, password: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
+                <label className="pp-modal-form-label">Mot de passe actuel (Sécurité)</label>
+                <input type="password" required value={emailData.password} onChange={e => setEmailData({...emailData, password: e.target.value})} className="pp-modal-form-input" />
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div className="pp-modal-form-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
                 <button type="submit" className="btn-primary" disabled={!emailData.new_email || !emailData.password}>Valider</button>
               </div>
@@ -689,23 +675,23 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {activeModal === "password" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" style={{ width: "400px" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Modifier le mot de passe</h3>
-            <form onSubmit={handleUpdatePassword} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <div className="modal-content pp-modal-form-content" onClick={e => e.stopPropagation()}>
+            <h3 className="pp-modal-form-title">Modifier le mot de passe</h3>
+            <form onSubmit={handleUpdatePassword} className="pp-modal-form-flex">
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Ancien mot de passe</label>
-                <input type="password" required value={passwordData.old_password} onChange={e => setPasswordData({...passwordData, old_password: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} autoFocus />
+                <label className="pp-modal-form-label">Ancien mot de passe</label>
+                <input type="password" required value={passwordData.old_password} onChange={e => setPasswordData({...passwordData, old_password: e.target.value})} className="pp-modal-form-input" autoFocus />
               </div>
-              <div style={{ borderTop: "1px solid var(--border)", margin: "5px 0" }}></div>
+              <div className="pp-modal-divider"></div>
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Nouveau mot de passe</label>
-                <input type="password" required value={passwordData.new_password} onChange={e => setPasswordData({...passwordData, new_password: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
+                <label className="pp-modal-form-label">Nouveau mot de passe</label>
+                <input type="password" required value={passwordData.new_password} onChange={e => setPasswordData({...passwordData, new_password: e.target.value})} className="pp-modal-form-input" />
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 5, fontSize: "0.85rem", color: "var(--text-muted)" }}>Confirmez le nouveau mot de passe</label>
-                <input type="password" required value={passwordData.confirm_password} onChange={e => setPasswordData({...passwordData, confirm_password: e.target.value})} style={{ width: "100%", boxSizing: "border-box", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-main)" }} />
+                <label className="pp-modal-form-label">Confirmez le nouveau mot de passe</label>
+                <input type="password" required value={passwordData.confirm_password} onChange={e => setPasswordData({...passwordData, confirm_password: e.target.value})} className="pp-modal-form-input" />
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div className="pp-modal-form-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
                 <button type="submit" className="btn-primary" disabled={!passwordData.old_password || !passwordData.new_password || !passwordData.confirm_password}>Valider</button>
               </div>
@@ -716,16 +702,16 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {activeModal === "deleteCollection" && (
         <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" style={{ width: "450px", border: "1px solid var(--danger)" }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Vider la collection</h3>
-                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action est irréversible. Toutes vos cartes enregistrées seront supprimées. Vos decks seront conservés mais s'afficheront comme virtuels si les cartes manquent.</p>
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
-                    <input type="text" className="input-field" placeholder="SUPPRIMER" value={deleteCollectionConfirm} onChange={e => setDeleteCollectionConfirm(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteCollectionConfirm === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} autoFocus />
+            <div className="modal-content pp-modal-delete" onClick={e => e.stopPropagation()}>
+                <h3 className="pp-modal-delete-title">Vider la collection</h3>
+                <p className="pp-modal-delete-desc">Cette action est irréversible. Toutes vos cartes enregistrées seront supprimées. Vos decks seront conservés mais s'afficheront comme virtuels si les cartes manquent.</p>
+                <div className="pp-modal-delete-group">
+                    <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
+                    <input type="text" className={`pp-modal-delete-input ${deleteCollectionConfirm === "SUPPRIMER" ? "success" : "default"}`} placeholder="SUPPRIMER" value={deleteCollectionConfirm} onChange={e => setDeleteCollectionConfirm(e.target.value)} autoFocus />
                 </div>
-                <div style={{ textAlign: "right", display:"flex", gap:10, justifyContent:"flex-end" }}>
+                <div className="pp-modal-delete-actions">
                     <button className="btn-secondary" onClick={closeModal}>Annuler</button>
-                    <button className="btn-secondary" style={{ background: deleteCollectionConfirm === "SUPPRIMER" ? "var(--danger)" : "var(--bg-input)", color: deleteCollectionConfirm === "SUPPRIMER" ? "white" : "var(--text-muted)", border: "none", cursor: deleteCollectionConfirm === "SUPPRIMER" ? "pointer" : "not-allowed" }} disabled={deleteCollectionConfirm !== "SUPPRIMER"} onClick={handleDeleteCollection}>Vider ma collection</button>
+                    <button className={`btn-secondary pp-btn-delete-confirm ${deleteCollectionConfirm === "SUPPRIMER" ? "active" : "inactive"}`} disabled={deleteCollectionConfirm !== "SUPPRIMER"} onClick={handleDeleteCollection}>Vider ma collection</button>
                 </div>
             </div>
         </div>
@@ -733,23 +719,23 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
       {activeModal === "deleteAccount" && (
         <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" style={{ width: "450px", border: "1px solid var(--danger)" }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ marginTop: 0, color: "var(--danger)" }}>Supprimer le compte</h3>
-                <p style={{ fontSize: "0.9rem", color: "var(--text-main)" }}>Cette action détruira complètement votre profil, vos decks, et toute votre collection sans aucun moyen de retour en arrière.</p>
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display:"block", marginBottom: 5, fontSize: "0.85rem" }}>Veuillez taper <strong>SUPPRIMER</strong> pour confirmer l'adieu :</label>
-                    <input type="text" className="input-field" placeholder="SUPPRIMER" value={deleteAccountConfirm} onChange={e => setDeleteAccountConfirm(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid", borderColor: deleteAccountConfirm === "SUPPRIMER" ? "var(--success)" : "var(--border)", background: "var(--bg-input)", color: "var(--text-main)", boxSizing: "border-box" }} autoFocus />
+            <div className="modal-content pp-modal-delete" onClick={e => e.stopPropagation()}>
+                <h3 className="pp-modal-delete-title">Supprimer le compte</h3>
+                <p className="pp-modal-delete-desc">Cette action détruira complètement votre profil, vos decks, et toute votre collection sans aucun moyen de retour en arrière.</p>
+                <div className="pp-modal-delete-group">
+                    <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer l'adieu :</label>
+                    <input type="text" className={`pp-modal-delete-input ${deleteAccountConfirm === "SUPPRIMER" ? "success" : "default"}`} placeholder="SUPPRIMER" value={deleteAccountConfirm} onChange={e => setDeleteAccountConfirm(e.target.value)} autoFocus />
                 </div>
-                <div style={{ textAlign: "right", display:"flex", gap:10, justifyContent:"flex-end" }}>
+                <div className="pp-modal-delete-actions">
                     <button className="btn-secondary" onClick={closeModal}>Annuler</button>
-                    <button className="btn-secondary" style={{ background: deleteAccountConfirm === "SUPPRIMER" ? "var(--danger)" : "var(--bg-input)", color: deleteAccountConfirm === "SUPPRIMER" ? "white" : "var(--text-muted)", border: "none", cursor: deleteAccountConfirm === "SUPPRIMER" ? "pointer" : "not-allowed" }} disabled={deleteAccountConfirm !== "SUPPRIMER"} onClick={handleDeleteAccount}>Supprimer mon compte</button>
+                    <button className={`btn-secondary pp-btn-delete-confirm ${deleteAccountConfirm === "SUPPRIMER" ? "active" : "inactive"}`} disabled={deleteAccountConfirm !== "SUPPRIMER"} onClick={handleDeleteAccount}>Supprimer mon compte</button>
                 </div>
             </div>
         </div>
       )}
 
       {notification.show && (
-        <div style={{ position: "fixed", bottom: "30px", left: "50%", transform: "translateX(-50%)", background: notification.type === "error" ? "var(--danger)" : "var(--success)", color: "white", padding: "12px 25px", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", fontWeight: "bold", zIndex: 10000 }}>
+        <div className={` ${notification.type}`}>
           {notification.message}
         </div>
       )}

@@ -49,65 +49,58 @@ export default function RegisterPage() {
       <AuthBackground />
 
       <div className="auth-box">
-        <h2 style={{ color: "var(--primary)", marginBottom: 30, fontSize: "2rem" }}>Inscription</h2>
+        <h2 className="auth-title">Inscription</h2>
         
-        <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ textAlign: "left" }}>
-            <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Nom d'utilisateur</label>
+        <form onSubmit={handleRegister} className="flex-col gap-20">
+          <div className="text-left">
+            <label className="form-label text-muted font-normal">Nom d'utilisateur</label>
             <input 
               type="text"
               value={nom} 
               onChange={(e) => setNom(e.target.value)} 
               required 
               placeholder="Pseudo"
-              style={{ width: "100%", boxSizing: "border-box" }}
+              className="input-field w-full"
             />
           </div>
 
-          <div style={{ textAlign: "left" }}>
-            <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Email</label>
+          <div className="text-left">
+            <label className="form-label text-muted font-normal">Email</label>
             <input 
               type="email" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required 
               placeholder="exemple@mail.com"
-              style={{ width: "100%", boxSizing: "border-box" }}
+              className="input-field w-full"
             />
           </div>
 
-          <div style={{ textAlign: "left" }}>
-            <label style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: 5, display: "block" }}>Mot de passe</label>
+          <div className="text-left">
+            <label className="form-label text-muted font-normal">Mot de passe</label>
             <input 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               required 
               placeholder="••••••••"
-              style={{ width: "100%", boxSizing: "border-box" }}
+              className="input-field w-full"
             />
           </div>
 
           {msg && (
-            <div style={{ 
-              padding: 10, 
-              borderRadius: "var(--radius)", 
-              background: success ? "rgba(76, 175, 80, 0.1)" : "rgba(244, 67, 54, 0.1)", 
-              color: success ? "var(--success)" : "var(--danger)",
-              fontSize: "0.9rem",
-              border: `1px solid ${success ? "var(--success)" : "var(--danger)"}`
-            }}>
+            <div className={success ? "alert-success" : "alert-danger"}>
               {msg}
             </div>
           )}
 
-          <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 10 }}>
+          <button type="submit" className="btn-primary mt-10" disabled={loading}>
             {loading ? "Création..." : "Créer mon compte"}
           </button>
         </form>
 
-        <p style={{ marginTop: 20, color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Déjà un compte ? <Link to="/login" style={{ color: "var(--primary)", fontWeight: "bold" }}>Se connecter</Link>
+        <p className="mt-20 text-muted text-sm">
+          Déjà un compte ? <Link to="/login" className="text-primary font-bold">Se connecter</Link>
         </p>
       </div>
     </div>
