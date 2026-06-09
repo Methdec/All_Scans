@@ -20,17 +20,15 @@ function App() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
-  
   const [openDecks, setOpenDecks] = useState([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((curr) => (curr === "light" ? "dark" : "light"));
-  };
+  const toggleTheme = () => setTheme((curr) => (curr === "light" ? "dark" : "light"));
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -76,67 +74,104 @@ function App() {
     document.documentElement.setAttribute("data-theme", "light");
     
     localStorage.removeItem("openDecks");
-
     window.location.href = "/login";
   };
 
-  // --- NOUVEAU : Fonction pour fermer un onglet ---
   const closeTab = (deckId) => {
     const storedDecks = JSON.parse(localStorage.getItem("openDecks") || "[]");
     const updatedDecks = storedDecks.filter(d => d.id !== deckId);
     localStorage.setItem("openDecks", JSON.stringify(updatedDecks));
     window.dispatchEvent(new Event("decksUpdated"));
 
-    // Si on ferme le deck qu'on est en train de regarder, on retourne sur /items
     if (window.location.pathname === `/deck/${deckId}`) {
         window.location.href = "/items";
     }
   };
 
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   if (!authChecked) return null; 
 
   const navLinkStyle = ({ isActive }) => ({
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    padding: "0 15px",
-    textDecoration: "none",
-    color: isActive ? "var(--primary)" : "var(--text-main)",
-    fontWeight: isActive ? "bold" : "normal",
-    borderBottom: isActive ? "3px solid var(--primary)" : "3px solid transparent",
-    boxSizing: "border-box",
-    transition: "all 0.2s ease",
-    whiteSpace: "nowrap"
+    height: "100%", display: "flex", alignItems: "center", padding: "0 15px", textDecoration: "none",
+    color: isActive ? "var(--primary)" : "var(--text-main)", fontWeight: isActive ? "bold" : "normal",
+    borderBottom: isActive ? "3px solid var(--primary)" : "3px solid transparent"
   });
 
   return (
     <Router>
-      <style>{`
-        .scrollable-nav::-webkit-scrollbar { display: none; }
-        .scrollable-nav { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* CSS POUR L'ONGLET ET LA CROIX */
-        .deck-tab { position: relative; display: flex; alignItems: center; }
-        .deck-tab .close-tab-btn {
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            color: var(--danger);
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 5px;
-        }
-        .deck-tab:hover .close-tab-btn { opacity: 1; }
-      `}</style>
+      {/* --- MENU LATÉRAL (TIROIR MOBILE) --- */}
+      <div className={`mobile-overlay ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}></div>
+      <div className={`mobile-drawer ${isMobileMenuOpen ? "open" : ""}`}>
+          <div style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--primary)", fontWeight: "bold", fontSize: "1.2rem" }}>Menu</span>
+              <button onClick={closeMobileMenu} style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+          </div>
+
+          <NavLink to="/search" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+              Recherche
+          </NavLink>
+          
+          {/* LIENS AFFICHÉS UNIQUEMENT QUAND DECONNECTÉ */}
+          {!user && (
+              <>
+                  <NavLink to="/login" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+                      Se connecter
+                  </NavLink>
+                  <NavLink to="/register" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+                      Créer un compte
+                  </NavLink>
+              </>
+          )}
+
+          {/* LIENS AFFICHÉS UNIQUEMENT QUAND CONNECTÉ */}
+          {user && (
+              <>
+                  <NavLink to="/cards" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+                      Collection
+                  </NavLink>
+                  <NavLink to="/device" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+                      Matériel
+                  </NavLink>
+                  <NavLink to="/items" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu} end>
+                      Mes Decks
+                  </NavLink>
+              </>
+          )}
+
+          {user && openDecks.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                  <div style={{ padding: "10px 25px", color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "bold" }}>
+                      Decks ouverts
+                  </div>
+                  {openDecks.map(deck => (
+                      <NavLink 
+                          key={deck.id}
+                          to={`/deck/${deck.id}`} 
+                          className={({ isActive }) => `mobile-deck-link ${isActive ? 'active' : ''}`}
+                          onClick={closeMobileMenu}
+                      >
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginRight: "10px" }}>
+                              {deck.name}
+                          </span>
+                          <button 
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeTab(deck.id); }}
+                              style={{ background: "transparent", border: "none", color: "var(--danger)", fontWeight: "bold", fontSize: "1.1rem", padding: "5px" }}
+                          >
+                              ✕
+                          </button>
+                      </NavLink>
+                  ))}
+              </div>
+          )}
+      </div>
+
+      {/* BOUTON BURGER FLOTTANT (Apparaît uniquement sur mobile sur les pages d'auth) */}
+      <button className="mobile-burger-floating" onClick={() => setIsMobileMenuOpen(true)}>
+          ☰
+      </button>
 
       <nav className="header" style={{ 
           background: "var(--bg-header)", borderBottom: "1px solid var(--border)", display: "flex", 
@@ -144,7 +179,13 @@ function App() {
           zIndex: 100, justifyContent: "space-between"
       }}>
         
-        <div style={{ display: "flex", alignItems: "center", gap: "5px", height: "100%", flexShrink: 0 }}>
+        {/* BOUTON BURGER CLASSIQUE (MOBILE UNIQUEMENT) */}
+        <button className="mobile-burger" onClick={() => setIsMobileMenuOpen(true)}>
+            ☰
+        </button>
+
+        {/* LIENS DE NAVIGATION (PC UNIQUEMENT) */}
+        <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "5px", height: "100%", flexShrink: 0 }}>
             <NavLink to="/search" style={navLinkStyle}>Recherche</NavLink>
             {user && (
               <>
@@ -155,8 +196,8 @@ function App() {
             )}
         </div>
 
-        {/* ZONE DES ONGLETS DYNAMIQUES */}
-        <div className="scrollable-nav" style={{ 
+        {/* ZONE DES ONGLETS DYNAMIQUES (PC UNIQUEMENT) */}
+        <div className="scrollable-nav desktop-tabs" style={{ 
             flex: 1, display: "flex", alignItems: "center", gap: "5px", height: "100%", 
             overflowX: "auto", padding: "0 10px", margin: "0 10px",
             borderLeft: openDecks.length > 0 ? "1px solid var(--border)" : "none",
@@ -170,7 +211,7 @@ function App() {
                         ...navLinkStyle(params),
                         fontStyle: "italic",
                         opacity: params.isActive ? 1 : 0.7,
-                        paddingRight: "25px" // Laisse la place pour la croix sans que le texte saute
+                        paddingRight: "25px"
                     })}
                   >
                     {deck.name}
@@ -186,6 +227,7 @@ function App() {
             ))}
         </div>
 
+        {/* AVATAR OU BOUTON DE CONNEXION (VISIBLE PARTOUT) */}
         <div style={{ display: "flex", gap: "15px", alignItems: "center", flexShrink: 0 }}>
           {user ? (
             <Link to="/profile" className="item-header" style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--primary)", fontWeight: "bold", textDecoration: "none" }}>
@@ -194,12 +236,12 @@ function App() {
                 alt="Profil" 
                 style={{ width: "35px", height: "35px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary)", backgroundColor: "var(--bg-main)" }} 
               />
-              {user.nom}
+              <span className="desktop-nav">{user.nom}</span>
             </Link>
           ) : (
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <Link to="/login" className="item-header" style={{ textDecoration: "none", color: "var(--text-main)" }}>Connexion</Link>
-              <Link to="/register" style={{ textDecoration: "none" }}>
+              <Link to="/login" className="item-header desktop-nav" style={{ textDecoration: "none", color: "var(--text-main)" }}>Connexion</Link>
+              <Link to="/register" className="desktop-nav" style={{ textDecoration: "none" }}>
                   <button className="btn-primary" style={{ padding: "6px 12px", fontSize: "0.9rem" }}>Créer un compte</button>
               </Link>
             </div>

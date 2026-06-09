@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import "../theme.css";
-import CardGrid from "./CardGrid";
 import CardSearchDetailModal from "./CardSearchDetailModal";
 import Loader from "./Loader"; 
 
@@ -54,8 +53,8 @@ export default function CardSearchBar() {
   const [error, setError] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
   
-  const hasAdvancedParams = typeTags.length > 0 || keywordTags.length > 0 || searchParams.get("set_name");
-  const [showAdvanced, setShowAdvanced] = useState(!!hasAdvancedParams);
+  // État pour gérer l'affichage du panneau de filtres sur mobile
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const currentPage = parseInt(searchParams.get("page")) || 1;
   const [hasMore, setHasMore] = useState(false);
@@ -150,6 +149,9 @@ export default function CardSearchBar() {
 
     params.set("page", 1);
     setSearchParams(params);
+    
+    // Ferme le panneau mobile une fois la recherche validée
+    setShowMobileFilters(false);
   };
 
   const handleNextPage = () => {
@@ -261,57 +263,70 @@ export default function CardSearchBar() {
   const hasPrevCard = selectedIndex > 0;
   const hasNextCard = selectedIndex !== -1 && selectedIndex < results.length - 1;
 
-  const handlePrevCard = () => {
-    if (hasPrevCard) setSelectedCard(results[selectedIndex - 1]);
-  };
-
-  const handleNextCard = () => {
-    if (hasNextCard) setSelectedCard(results[selectedIndex + 1]);
-  };
+  const handlePrevCard = () => { if (hasPrevCard) setSelectedCard(results[selectedIndex - 1]); };
+  const handleNextCard = () => { if (hasNextCard) setSelectedCard(results[selectedIndex + 1]); };
 
   return (
-    <div className="split-layout">
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
-      {/* BARRE LATÉRALE GAUCHE (Filtres) */}
-      <div className="sidebar-filters">
-        <form onSubmit={handleSearchSubmit}>
-          <div className="sidebar-title mb-20">Recherche Scryfall</div>
+      {/* --- RECHERCHE MOBILE (Visible uniquement sur mobile via CSS) --- */}
+      <div className="mobile-search-header">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
+          placeholder="Rechercher une carte..."
+          className="mobile-main-search-input"
+        />
+        <button
+          type="button"
+          className="mobile-filter-toggle"
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+        >
+          Filtres {showMobileFilters ? "▲" : "▼"}
+        </button>
+      </div>
 
-          <div className="search-field-group">
-            <label className="search-field-label">Nom de la carte</label>
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher..." className="input-field" />
-          </div>
+      {/* CONTENEUR SPLIT (Scrolls indépendants) */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", position: "relative", width: "100%" }}>
+        
+        {/* BARRE LATÉRALE GAUCHE (Filtres complets) */}
+        <div className={`sidebar-filters ${showMobileFilters ? "mobile-expanded" : ""}`}>
+          <form onSubmit={handleSearchSubmit}>
+            <div className="sidebar-title mb-20">Recherche Scryfall</div>
 
-          <div className="search-field-group">
-            <div className="flex items-center justify-between mb-5">
-                <label className="search-field-label m-0">Couleurs</label>
-                <select value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="select-field" style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}>
-                    <option value="exact">Exacte</option>
-                    <option value="subset">Approx.</option>
-                </select>
+            <div className="search-field-group desktop-only-search">
+              <label className="search-field-label">Nom de la carte</label>
+              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher..." className="input-field" />
             </div>
-            <div className="flex gap-10 flex-wrap justify-center p-10" style={{ background: "var(--bg-input)", borderRadius: "4px" }}>
-                {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
+
+            <div className="search-field-group">
+              <div className="flex items-center justify-between mb-5">
+                  <label className="search-field-label m-0">Couleurs</label>
+                  <select value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="select-field" style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}>
+                      <option value="exact">Exacte</option>
+                      <option value="subset">Approx.</option>
+                  </select>
+              </div>
+              <div className="flex gap-10 flex-wrap justify-center p-10" style={{ background: "var(--bg-input)", borderRadius: "4px" }}>
+                  {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
+              </div>
             </div>
-          </div>
 
-          <div className="search-field-group">
-            <label className="search-field-label">Rareté</label>
-            <select name="rarity" value={filters.rarity} onChange={handleChange} className="select-field">
-              <option value="">Toutes</option>
-              <option value="common">Commune</option>
-              <option value="uncommon">Peu commune</option>
-              <option value="rare">Rare</option>
-              <option value="mythic">Mythique</option>
-            </select>
-          </div>
+            <div className="search-field-group">
+              <label className="search-field-label">Rareté</label>
+              <select name="rarity" value={filters.rarity} onChange={handleChange} className="select-field">
+                <option value="">Toutes</option>
+                <option value="common">Commune</option>
+                <option value="uncommon">Peu commune</option>
+                <option value="rare">Rare</option>
+                <option value="mythic">Mythique</option>
+              </select>
+            </div>
 
-          <button type="button" className="btn-toggle-advanced" onClick={() => setShowAdvanced(!showAdvanced)}>
-            {showAdvanced ? "Masquer les filtres avancés" : "+ Afficher les filtres avancés"}
-          </button>
-
-          {showAdvanced && (
-            <div className="search-advanced-section">
+            {/* Tous les filtres avancés affichés directement */}
+            <div className="search-advanced-section" style={{ borderTop: "none", paddingTop: "0", marginTop: "15px" }}>
 
               <div className="search-field-group">
                 <label className="search-field-label">Type(s)</label>
@@ -368,67 +383,85 @@ export default function CardSearchBar() {
               </div>
 
             </div>
+
+            <div style={{ marginTop: "10px", paddingBottom: "20px" }}>
+              <button type="submit" className="btn-primary w-full p-12 text-lg" disabled={loading}>
+                Rechercher
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* ZONE DE RÉSULTATS DROITE */}
+        <div className="results-area scroll-area">
+          {loading ? (
+            <Loader />
+          ) : (
+            <>
+              {error && <div className="text-center font-bold p-20 text-danger">{error}</div>}
+              
+              {!error && results.length === 0 && (
+                <div className="text-center mt-auto" style={{ paddingTop: 50, color: "var(--text-muted)" }}>
+                  Saisissez des critères de recherche pour explorer Scryfall.
+                </div>
+              )}
+
+              {results.length > 0 && (
+                <div className="cl-cards-grid">
+                  {results.map((card) => {
+                    const imageUrl = card.image_uris?.normal || card.image_uris?.border_crop || (card.card_faces && card.card_faces[0]?.image_uris?.normal);
+                    return (
+                      <div key={card.id} className="cl-card-item" onClick={() => setSelectedCard(card)}>
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                          
+                          <div style={{ position: "relative", width: "100%", marginBottom: "8px" }}>
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={card.name} className="cl-card-img" loading="lazy" />
+                            ) : (
+                              <div style={{ width: "100%", aspectRatio: "2.5/3.5", backgroundColor: "#333", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: "0.8rem" }}>No Img</div>
+                            )}
+                          </div>
+                          
+                          <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-end" }}>
+                            <div className="font-bold card-text-truncate" title={card.name}>
+                              {card.name}
+                            </div>
+                            <div className="text-muted card-text-truncate-sm" title={card.set_name}>
+                              {card.set_name || "?"}
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
 
-          <div style={{ marginTop: "30px", paddingBottom: "20px" }}>
-            <button type="submit" className="btn-primary w-full p-12 text-lg" disabled={loading}>
-              Rechercher
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* ZONE DE RÉSULTATS DROITE */}
-      <div className="results-area">
-        
-        {loading ? (
-          <Loader />
-        ) : (
-          <>
-            {error && <div className="text-center font-bold p-20 text-danger">{error}</div>}
-            
-            {!error && results.length === 0 && (
-              <div className="text-center mt-auto" style={{ paddingTop: 50, color: "var(--text-muted)" }}>
-                Saisissez des critères de recherche pour explorer Scryfall.
-              </div>
-            )}
-
-            {results.length > 0 && (
-              <div className="p-20">
-                <CardGrid
-                  cards={results}
-                  onCardClick={(cardId) => {
-                    const card = results.find(c => c.id === cardId);
-                    if (card) setSelectedCard(card);
-                  }}
-                  renderAction={null}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {!loading && results.length > 0 && (
-          <div className="search-pagination">
-            <button 
-              className="input-field" 
-              style={{ width: "auto", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }} 
-              onClick={handlePrevPage} 
-              disabled={currentPage === 1}
-            >
-              ← Précédent
-            </button>
-            <span className="font-bold" style={{ color: "var(--text-main)" }}>Page {currentPage}</span>
-            <button 
-              className="input-field" 
-              style={{ width: "auto", cursor: !hasMore ? "not-allowed" : "pointer", opacity: !hasMore ? 0.5 : 1 }} 
-              onClick={handleNextPage} 
-              disabled={!hasMore}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
+          {!loading && results.length > 0 && (
+            <div className="search-pagination">
+              <button 
+                className="input-field" 
+                style={{ width: "auto", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }} 
+                onClick={handlePrevPage} 
+                disabled={currentPage === 1}
+              >
+                ← Précédent
+              </button>
+              <span className="font-bold" style={{ color: "var(--text-main)" }}>Page {currentPage}</span>
+              <button 
+                className="input-field" 
+                style={{ width: "auto", cursor: !hasMore ? "not-allowed" : "pointer", opacity: !hasMore ? 0.5 : 1 }} 
+                onClick={handleNextPage} 
+                disabled={!hasMore}
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {selectedCard && (

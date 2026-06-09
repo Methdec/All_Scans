@@ -114,6 +114,9 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
         {hasPrev && <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="card-nav-btn card-nav-prev" title="Carte précédente">&#10094;</button>}
         {hasNext && <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="card-nav-btn card-nav-next" title="Carte suivante">&#10095;</button>}
 
+        {/* TITRE MOBILE UNIQUEMENT (Masqué sur PC) */}
+        <h2 className="mobile-card-title">{displayedName}</h2>
+
         {/* COLONNE 1 : IMAGE */}
         <div className="card-col-image">
           {imageLoading && imageUrl && (
@@ -142,7 +145,8 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
         {/* COLONNE 2 : INFOS & TEXTE */}
         <div className="card-col-info">
           
-          <h2 className="card-title-lg" style={{ opacity: (isFlipping || imageLoading) ? 0 : 1 }}>
+          {/* TITRE PC UNIQUEMENT */}
+          <h2 className="card-title-lg desktop-card-title" style={{ opacity: (isFlipping || imageLoading) ? 0 : 1 }}>
             {displayedName}
           </h2>
 
@@ -161,7 +165,6 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
         {/* COLONNE 3 : ACTIONS */}
         <div className="card-col-actions">
           
-          {/* Bloc Achat */}
           {Object.keys(purchaseUris).length > 0 && (
               <div>
                   <h4 className="m-0 mb-10 text-lg">Acheter</h4>
@@ -173,7 +176,6 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
               </div>
           )}
 
-          {/* Bloc Contexte Deck (Pour les cartes manquantes affichées dans DeckDetails) */}
           {deckContext && (
             <div>
                 <h4 className="m-0 mb-10 text-lg text-primary">Gestion du Deck</h4>
@@ -198,7 +200,6 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
             </div>
           )}
 
-          {/* Indication Collection */}
           <div className="mt-auto border-top">
              <div className="collection-mgmt-row">
                  <span className="text-sm" style={{ color: "var(--text-muted)" }}>En collection :</span>

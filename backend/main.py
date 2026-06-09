@@ -14,7 +14,7 @@ app = FastAPI(title="All Scans API")
 # Middleware CORS complet
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://10.1.5.251:3000", "http://localhost:3000", "http://127.0.0.1:3000", "http://10.88.0.34:3000"],
+    allow_origins=["http://10.1.5.251:3000", "http://localhost:3000", "http://127.0.0.1:3000", "http://10.88.0.34:3000", "http://192.168.1.48:3000", "http://192.168.1.129:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

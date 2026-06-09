@@ -406,6 +406,9 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         {hasPrev && <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="card-nav-btn card-nav-prev" title="Carte précédente">&#10094;</button>}
         {hasNext && <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="card-nav-btn card-nav-next" title="Carte suivante">&#10095;</button>}
 
+        {/* TITRE MOBILE UNIQUEMENT (Masqué sur PC) */}
+        <h2 className="mobile-card-title">{displayedName}</h2>
+
         {/* COLONNE 1 : IMAGE */}
         <div className="card-col-image">
           {imageLoading && imageUrl && (
@@ -439,7 +442,8 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         {/* COLONNE 2 : INFOS & TEXTE */}
         <div className="card-col-info">
           
-          <h2 className="card-title-lg" style={{ opacity: (isFlipping || imageLoading) ? 0 : 1 }}>
+          {/* TITRE PC UNIQUEMENT */}
+          <h2 className="card-title-lg desktop-card-title" style={{ opacity: (isFlipping || imageLoading) ? 0 : 1 }}>
             {displayedName}
             {isFoil === true && <span className="foil-badge">[F] Foil</span>}
           </h2>

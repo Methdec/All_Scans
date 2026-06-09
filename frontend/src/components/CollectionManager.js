@@ -339,7 +339,7 @@ export default function CollectionManager() {
     <>
     <div className="cm-split-layout">
       
-      {/* PANNEAU DE GAUCHE : IMPORT / EXPORT */}
+      {/* PANNEAU : IMPORT / EXPORT (En haut sur Mobile, à gauche sur PC) */}
       <div className="cm-sidebar">
         <h2 className="cm-title">Gestion de la Collection</h2>
 
@@ -389,7 +389,7 @@ export default function CollectionManager() {
         </div>
       </div>
 
-      {/* PANNEAU DE DROITE : HISTORIQUE */}
+      {/* PANNEAU : HISTORIQUE (En bas sur Mobile, à droite sur PC) */}
       <div className="cm-results-area">
         <h2 className="cm-title">
           Historique des opérations
@@ -497,7 +497,7 @@ export default function CollectionManager() {
                         <div className="cm-stat-grid-2">
                             <div className="cm-stat-box">
                                 <p className="cm-stat-box-label">Valeur Estimée Ajoutée</p>
-                                <p style={{ margin: 0, fontSize: "2.5rem", fontWeight: "bold", color: "var(--success)" }}>
+                                <p className="cm-total-price">
                                     {recapStats.totalPrice.toFixed(2)} €
                                 </p>
                             </div>
@@ -506,8 +506,8 @@ export default function CollectionManager() {
                                 <p className="cm-stat-box-label">Plus belle trouvaille</p>
                                 {recapStats.mostExpensiveCard ? (
                                     <div style={{ textAlign: "center" }}>
-                                        <p style={{ margin: "0 0 5px 0", color: "var(--primary)", fontWeight: "bold", fontSize: "1.1rem" }}>{recapStats.mostExpensiveCard.name}</p>
-                                        <p style={{ margin: 0, color: "var(--text-main)", fontSize: "1.2rem" }}>{recapStats.maxPrice.toFixed(2)} €</p>
+                                        <p className="cm-top-card-name" title={recapStats.mostExpensiveCard.name}>{recapStats.mostExpensiveCard.name}</p>
+                                        <p className="cm-top-card-price">{recapStats.maxPrice.toFixed(2)} €</p>
                                     </div>
                                 ) : (
                                     <p style={{ margin: 0, color: "var(--text-muted)" }}>N/A</p>

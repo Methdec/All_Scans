@@ -69,6 +69,8 @@ export default function CardsList() {
   const [tagsSummary, setTagsSummary] = useState([]);
   const [tagColors, setTagColors] = useState({});
 
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
   const fetchAvailableTags = async () => {
       try {
           const res = await fetch(`${API_BASE_URL}/me/collection/tags`, { credentials: "include" });
@@ -287,11 +289,16 @@ export default function CardsList() {
       setTagFilters(newFilters);
   };
 
-  const ManaSymbol = ({ code, alt }) => {
+  // Fonction pure pour afficher le symbole, évite les re-rendus intempestifs
+  const renderManaSymbol = (code) => {
     const isSelected = colorFilter.split(",").includes(code);
     return (
-      <img src={MANA_SYMBOLS[code]} alt={alt} onClick={() => toggleColor(code)}
-        style={{ width: "32px", height: "32px", cursor: "pointer", borderRadius: "50%", border: isSelected ? "3px solid #FF9800" : "2px solid transparent", transform: isSelected ? "scale(1.1)" : "scale(1)", opacity: isSelected ? 1 : 0.6, transition: "all 0.2s" }}
+      <img 
+        key={code}
+        src={MANA_SYMBOLS[code]} 
+        alt={code} 
+        onClick={() => toggleColor(code)}
+        className={`mana-symbol-filter ${isSelected ? 'selected' : ''}`}
       />
     );
   };
@@ -328,343 +335,348 @@ export default function CardsList() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
+    <div className="cl-page-container">
 
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--bg-main)" }}>
+      {/* Onglets */}
+      <div className="cl-tabs-wrapper">
         <button className={`tab-button ${activeTab === "collection" ? "active" : ""}`} onClick={() => setActiveTab("collection")}>Ma Collection</button>
         <button className={`tab-button ${activeTab === "sync" ? "active" : ""}`} onClick={() => setActiveTab("sync")}>Import / Export</button>
       </div>
 
       {activeTab === "collection" && (
-        <div className="split-layout" style={{ flex: 1, overflow: "hidden" }}>
+        <div className="cl-main-layout">
           
-          <div className="cl-sidebar">
-            
-            <div className="cl-sidebar-content">
-                <div className="sidebar-title" style={{ marginBottom: "20px" }}>Filtres de Collection</div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Nom</label>
-                    <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="custom-input" />
-                </div>
-
-                <div className="cl-field-container">
-                    <div style={{display: "flex", alignItems: "center", marginBottom: "5px", justifyContent: "space-between"}}>
-                        <label className="cl-label" style={{ marginBottom: 0 }}>Couleurs</label>
-                        <select 
-                            value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="custom-select"
-                            style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}
-                            title="Exacte = Strictement ces couleurs. Approx = Inclus dans ces couleurs."
-                        >
-                            <option value="exact">Exacte</option>
-                            <option value="subset">Approx.</option>
-                        </select>
-                    </div>
-                    
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", background: "var(--bg-input, rgba(0,0,0,0.2))", padding: "10px", borderRadius: "4px" }}>
-                        {Object.keys(MANA_SYMBOLS).map(c => <ManaSymbol key={c} code={c} alt={c} />)}
-                    </div>
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Type(s)</label>
-                    <input type="text" placeholder="Ex: Creature (Entrée)" value={tempTypeInput} onChange={(e) => setTempTypeInput(e.target.value)} onKeyDown={handleTypeKeyDown} className="custom-input" />
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
-                        {typeFilters.map((filter, index) => (
-                            <div key={index} style={{
-                                display: "flex", alignItems: "center", fontSize: "0.75rem",
-                                background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
-                                border: `1px solid ${filter.mode === "include" ? "var(--success, #4CAF50)" : "var(--danger, #F44336)"}`,
-                                borderRadius: "4px", padding: "2px 6px", color: "var(--text-main)", maxWidth: "100%", overflow: "hidden"
-                            }}>
-                                <span style={{ marginRight: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{filter.text}</span>
-                                <button 
-                                    onClick={() => toggleTypeMode(index)} 
-                                    style={{ background: "transparent", border: "none", cursor: "pointer", color: filter.mode === "include" ? "#4CAF50" : "#F44336", marginRight: "5px", fontWeight: "bold", fontSize: "0.75rem" }}
-                                    title="Basculer entre Inclus (EST) et Exclus (NON)"
-                                >
-                                    {filter.mode === "include" ? "EST" : "NON"}
-                                </button>
-                                <button onClick={() => removeTypeFilter(index)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)", fontWeight: "bold" }}>✕</button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Texte</label>
-                    <input type="text" placeholder="Ex: draw a card" value={oracleText} onChange={(e) => setOracleText(e.target.value)} className="custom-input" />
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Rareté</label>
-                    <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="custom-select">
-                        <option value="">Toutes</option>
-                        <option value="common">Commune</option>
-                        <option value="uncommon">Unco</option>
-                        <option value="rare">Rare</option>
-                        <option value="mythic">Mythique</option>
-                    </select>
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Mot(s) clé(s)</label>
-                    <input type="text" placeholder="Ex: Flying, Haste..." value={keywordsFilter} onChange={(e) => setKeywordsFilter(e.target.value)} className="custom-input" />
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Coût Mana (CMC)</label>
-                    <input type="number" min="0" placeholder="Ex: 3" value={cmcFilter} onChange={(e) => setCmcFilter(e.target.value)} className="custom-input" />
-                </div>
-
-                <div className="cl-field-container">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                        <label className="cl-label" style={{ marginBottom: 0 }}>Tag(s) actif(s)</label>
-                        <button 
-                            onClick={() => setIsTagsModalOpen(true)} 
-                            style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.8rem", textDecoration: "underline", padding: 0 }}
-                        >
-                            (Gérer les règles)
-                        </button>
-                    </div>
-                    
-                    <select onChange={handleTagSelect} value="" className="custom-select">
-                        <option value="" disabled>Sélectionner un tag...</option>
-                        {availableTags.length === 0 && <option value="" disabled>Aucun tag trouvé</option>}
-                        {availableTags.filter(t => t.trim() !== "").map(tag => (
-                            <option key={tag} value={tag}>{tag}</option>
-                        ))}
-                    </select>
-                    
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
-                        {tagFilters.map((filter, index) => {
-                            const customColor = tagColors[filter.text.toLowerCase()] || (filter.mode === "include" ? "#4CAF50" : "#F44336");
-                            return (
-                                <div key={index} style={{
-                                    display: "flex", alignItems: "center", fontSize: "0.75rem",
-                                    background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
-                                    border: `1px solid ${customColor}`,
-                                    borderRadius: "4px", padding: "2px 6px", color: "var(--text-main)", maxWidth: "100%", overflow: "hidden"
-                                }}>
-                                    <span style={{ marginRight: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: customColor }}>
-                                        {filter.text.toUpperCase()}
-                                    </span>
-                                    <button 
-                                        onClick={() => toggleTagMode(index)} 
-                                        style={{ background: "transparent", border: "none", cursor: "pointer", color: filter.mode === "include" ? "#4CAF50" : "#F44336", marginRight: "5px", fontWeight: "bold", fontSize: "0.75rem" }}
-                                        title="Basculer entre Inclus (EST) et Exclus (NON)"
-                                    >
-                                        {filter.mode === "include" ? "EST" : "NON"}
-                                    </button>
-                                    <button onClick={() => removeTagFilter(index)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)", fontWeight: "bold" }}>✕</button>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-
-                <div className="cl-field-container">
-                    <label className="cl-label">Légalité</label>
-                    <div style={{display: "flex", gap: "8px"}}>
-                        <div style={{flex: 2}}>
-                            <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)} className="custom-select">
-                                {FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                            </select>
-                        </div>
-                        <div style={{flex: 1.2}}>
-                            <select value={legalityStatus} onChange={(e) => setLegalityStatus(e.target.value)} className="custom-select">
-                                <option value="true">Légal</option>
-                                <option value="false">Ban</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-                    <div style={{ flex: 1 }}>
-                        <label className="cl-label">Force</label>
-                        <div style={{display: "flex"}}>
-                            <select value={powerOp} onChange={(e) => setPowerOp(e.target.value)} className="custom-select select-prefix">
-                                <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
-                            </select>
-                            <input type="text" value={powerFilter} onChange={(e) => setPowerFilter(e.target.value)} className="custom-input input-suffix" />
-                        </div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <label className="cl-label">Endu.</label>
-                        <div style={{display: "flex"}}>
-                            <select value={toughnessOp} onChange={(e) => setToughnessOp(e.target.value)} className="custom-select select-prefix">
-                                <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
-                            </select>
-                            <input type="text" value={toughnessFilter} onChange={(e) => setToughnessFilter(e.target.value)} className="custom-input input-suffix" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="cl-field-container" style={{ marginTop: "20px", borderTop: "1px solid var(--border)", paddingTop: "15px" }}>
-                    <label className="cl-label">Trier par</label>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="custom-select" style={{ flex: 1 }}>
-                            <option value="name">Nom</option>
-                            <option value="count">Quantité possédée</option>
-                            <option value="price">Prix estimé</option>
-                            <option value="set">Extension (Grille)</option>
-                            <option value="tags">Tags (Grille)</option>
-                        </select>
-                        <button 
-                            onClick={() => setSortDir(sortDir === 1 ? -1 : 1)} 
-                            className="btn-secondary" 
-                            style={{ padding: "0 12px", fontSize: "1.1rem", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                            title={sortDir === 1 ? "Croissant (Vieux -> Récent / A-Z)" : "Décroissant (Récent -> Vieux / Z-A)"}
-                        >
-                            {sortDir === 1 ? "v" : "^"}
-                        </button>
-                    </div>
-                </div>
-                
-                <div style={{ height: "10px" }}></div>
-            </div>
-
-            <div className="cl-sidebar-footer">
-               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0", textAlign: "center" }}>Cartes affichées : <strong style={{ color: "var(--text-main)" }}>{cards.length}</strong></p>
-            </div>
+          {/* --- RECHERCHE MOBILE --- */}
+          <div className="mobile-search-header">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && setShowMobileFilters(false)}
+              placeholder="Rechercher dans la collection..."
+              className="mobile-main-search-input"
+            />
+            <button
+              type="button"
+              className="mobile-filter-toggle"
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+            >
+              Filtres {showMobileFilters ? "▲" : "▼"}
+            </button>
           </div>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-main)" }}>
+          {/* Structure Flex Robuste pour éviter l'effondrement sur mobile */}
+          <div style={{ display: "flex", flex: 1, position: "relative", width: "100%", overflow: "hidden" }}>
             
-            {setFilter && sortBy !== "set" && sortBy !== "tags" && (
-                <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", alignItems: "center", background: "var(--bg-sidebar)", flexShrink: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", background: "rgba(255, 152, 0, 0.15)", border: "1px solid var(--primary)", padding: "5px 15px", borderRadius: "20px", color: "var(--text-main)", fontWeight: "bold", fontSize: "0.9rem" }}>
-                        Extension filtrée : <span style={{ color: "var(--primary)", marginLeft: "5px" }}>{setFilter.toUpperCase()}</span>
-                        <button onClick={() => setSetFilter("")} style={{ background: "transparent", border: "none", marginLeft: "10px", cursor: "pointer", fontWeight: "bold", color: "var(--danger)", fontSize: "1rem" }} title="Retirer ce filtre">✕</button>
-                    </div>
-                </div>
-            )}
+            {/* BARRE DE FILTRES GAUCHE */}
+            <div className={`cl-sidebar ${showMobileFilters ? "mobile-expanded" : ""}`}>
+              
+              <div className="cl-sidebar-content">
+                  <div className="sidebar-title" style={{ marginBottom: "20px" }}>Filtres de Collection</div>
 
-            <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
-                {sortBy === "set" ? (
-                    <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "15px" }}>
-                        {loading ? (
-                            <div style={{ textAlign: "center", width: "100%", padding: "20px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>Chargement des extensions...</div>
-                        ) : userSets.length === 0 ? (
-                            <div style={{ textAlign: "center", width: "100%", padding: "20px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>Aucune extension trouvée.</div>
-                        ) : (
-                            (() => {
-                                let currentYear = null;
-                                return userSets.map((set) => {
-                                    const setYear = set.released_at ? set.released_at.substring(0, 4) : "Inconnu";
-                                    const showYearHeader = setYear !== currentYear;
-                                    currentYear = setYear;
+                  <div className="cl-field-container desktop-only-search">
+                      <label className="cl-label">Nom</label>
+                      <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="custom-input" />
+                  </div>
 
-                                    return (
-                                        <React.Fragment key={set.set_code}>
-                                            {showYearHeader && (
-                                                <div style={{ gridColumn: "1 / -1", borderBottom: "1px solid var(--border)", paddingBottom: "5px", marginTop: "15px", color: "var(--primary)", fontSize: "1.2rem", fontWeight: "bold" }}>
-                                                    {setYear}
-                                                </div>
-                                            )}
-                                            <div 
-                                                onClick={() => { 
-                                                    setSetFilter(set.set_code); 
-                                                    setSortBy("name"); 
-                                                }} 
-                                                style={{ background: "var(--bg-input)", borderRadius: "12px", padding: "15px 20px", display: "flex", alignItems: "center", gap: "20px", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", border: "2px solid transparent", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" }} 
-                                                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.transform = "translateY(-3px)"; }} 
-                                                onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
-                                            >
-                                                <img src={`https://svgs.scryfall.io/sets/${set.set_code}.svg`} alt={set.set_name} style={{ width: "40px", height: "40px", filter: "brightness(0) invert(1)" }} onError={(e) => e.target.style.display = 'none'} />
-                                                <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-                                                    <span style={{ fontWeight: "bold", fontSize: "1.1rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={set.set_name}>{set.set_name}</span>
-                                                    <span style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "4px" }}>{set.count} carte{set.count > 1 ? 's' : ''}</span>
-                                                </div>
-                                            </div>
-                                        </React.Fragment>
-                                    );
-                                });
-                            })()
-                        )}
-                    </div>
-                ) : sortBy === "tags" ? (
-                    <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
-                        {loading ? (
-                            <div style={{ textAlign: "center", width: "100%", padding: "20px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>Chargement des tags...</div>
-                        ) : tagsSummary.length === 0 ? (
-                            <div style={{ textAlign: "center", width: "100%", padding: "20px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>Aucun tag trouvé.</div>
-                        ) : (
-                            tagsSummary.map(tagObj => {
-                                const currentTagColor = tagColors[tagObj.tag_name.toLowerCase()] || "var(--primary)";
-                                return (
-                                    <div key={tagObj.tag_name}
-                                         onClick={() => {
-                                             if (tagObj.tag_name !== "Sans tag") {
-                                                 if (!tagFilters.find(t => t.text === tagObj.tag_name)) {
-                                                     setTagFilters([...tagFilters, { text: tagObj.tag_name, mode: "include" }]);
-                                                 }
-                                             }
-                                             setSortBy("name");
-                                         }}
-                                         style={{
-                                            background: "var(--bg-input)", borderRadius: "12px", padding: "25px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", border: "2px solid transparent", boxShadow: "0 4px 6px rgba(0,0,0,0.3)"
-                                         }}
-                                         onMouseEnter={e => { e.currentTarget.style.borderColor = currentTagColor; e.currentTarget.style.transform = "translateY(-3px)"; }}
-                                         onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
-                                    >
-                                        <h3 style={{ margin: "0 0 10px 0", color: currentTagColor, textTransform: "uppercase", fontSize: "1.2rem", textAlign: "center", wordBreak: "break-word" }}>
-                                            {tagObj.tag_name}
-                                        </h3>
-                                        <div style={{ color: "var(--text-muted)", fontSize: "1rem", fontWeight: "bold" }}>
-                                            {tagObj.count} carte{tagObj.count > 1 ? 's' : ''}
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                ) : (
-                    <div className="cl-cards-grid">
-                        {cards.map((card, index) => (
-                            <div 
-                              ref={cards.length === index + 1 ? lastCardElementRef : null} 
-                              key={card._id || `${card.id}_${card.is_foil}`} 
-                              className="cl-card-item"
-                              onClick={() => setSelectedCard({ id: card.id || card._id, is_foil: card.is_foil })} 
-                            >
-                               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                                    <div style={{ position: "relative", width: "100%", marginBottom: "12px" }}>
-                                      {card.image_normal ? (
-                                        <img src={card.image_normal} alt={card.name} className="cl-card-img" loading="lazy" />
-                                      ) : (
-                                        <div style={{ width: "100%", aspectRatio: "2.5/3.5", backgroundColor: "#333", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>Pas d'image</div>
-                                      )}
-                                    </div>
-                                    
-                                    <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-end" }}>
-                                        <div style={{ fontWeight: "bold", color: "var(--text-main, #fff)", fontSize: "0.95rem", textAlign: "center", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={card.name}>
-                                          {card.name}
-                                          {card.is_foil && (
-                                             <span style={{ marginLeft: "6px", background: "linear-gradient(45deg, #FFD700, #FF9800)", color: "#121212", fontSize: "0.65rem", fontWeight: "bold", padding: "2px 4px", borderRadius: "4px", verticalAlign: "middle" }}>
-                                                 F
-                                             </span>
-                                          )}
-                                        </div>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <span style={{ color: "var(--text-muted, #aaa)", fontSize: "0.8rem", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }} title={card.set_name}>
-                                                {sortBy === "price" ? (
-                                                    card.prices?.eur ? <span style={{ color: "#4CAF50", fontWeight: "bold" }}>{card.prices.eur} €</span> : "N/A"
-                                                ) : (
-                                                    card.set_name || "?"
-                                                )}
-                                            </span>
-                                            <span style={{ color: "var(--primary)", fontWeight: "bold", fontSize: "0.9rem" }}>x{card.count || 1}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {loading && <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>Chargement...</div>}
-                        {!loading && cards.length === 0 && <div style={{ textAlign: "center", marginTop: 50, color: "var(--text-muted)", gridColumn: "1 / -1" }}>Aucune carte trouvée.</div>}
-                    </div>
-                )}
+                  <div className="cl-field-container">
+                      <div className="cl-filter-header">
+                          <label className="cl-label" style={{ marginBottom: 0 }}>Couleurs</label>
+                          <select 
+                              value={colorMode} onChange={(e) => setColorMode(e.target.value)} className="custom-select"
+                              style={{ width: "auto", padding: "2px 25px 2px 8px", fontSize: "0.75rem", height: "auto" }}
+                              title="Exacte = Strictement ces couleurs. Approx = Inclus dans ces couleurs."
+                          >
+                              <option value="exact">Exacte</option>
+                              <option value="subset">Approx.</option>
+                          </select>
+                      </div>
+                      
+                      <div className="cl-mana-container">
+                          {Object.keys(MANA_SYMBOLS).map(c => renderManaSymbol(c))}
+                      </div>
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Type(s)</label>
+                      <input type="text" placeholder="Ex: Creature (Entrée)" value={tempTypeInput} onChange={(e) => setTempTypeInput(e.target.value)} onKeyDown={handleTypeKeyDown} className="custom-input" />
+                      <div className="cl-active-filters">
+                          {typeFilters.map((filter, index) => (
+                              <div key={index} className="cl-filter-badge" style={{
+                                  background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
+                                  borderColor: filter.mode === "include" ? "var(--success, #4CAF50)" : "var(--danger, #F44336)"
+                              }}>
+                                  <span className="cl-filter-badge-text">{filter.text}</span>
+                                  <button 
+                                      onClick={() => toggleTypeMode(index)} 
+                                      className="cl-filter-badge-btn"
+                                      style={{ color: filter.mode === "include" ? "#4CAF50" : "#F44336" }}
+                                      title="Basculer entre Inclus (EST) et Exclus (NON)"
+                                  >
+                                      {filter.mode === "include" ? "EST" : "NON"}
+                                  </button>
+                                  <button onClick={() => removeTypeFilter(index)} className="cl-filter-badge-close">✕</button>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Texte</label>
+                      <input type="text" placeholder="Ex: draw a card" value={oracleText} onChange={(e) => setOracleText(e.target.value)} className="custom-input" />
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Rareté</label>
+                      <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="custom-select">
+                          <option value="">Toutes</option>
+                          <option value="common">Commune</option>
+                          <option value="uncommon">Unco</option>
+                          <option value="rare">Rare</option>
+                          <option value="mythic">Mythique</option>
+                      </select>
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Mot(s) clé(s)</label>
+                      <input type="text" placeholder="Ex: Flying, Haste..." value={keywordsFilter} onChange={(e) => setKeywordsFilter(e.target.value)} className="custom-input" />
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Coût Mana (CMC)</label>
+                      <input type="number" min="0" placeholder="Ex: 3" value={cmcFilter} onChange={(e) => setCmcFilter(e.target.value)} className="custom-input" />
+                  </div>
+
+                  <div className="cl-field-container">
+                      <div className="cl-filter-header">
+                          <label className="cl-label" style={{ marginBottom: 0 }}>Tag(s) actif(s)</label>
+                          <button 
+                              onClick={() => setIsTagsModalOpen(true)} 
+                              style={{ background: "transparent", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.8rem", textDecoration: "underline", padding: 0 }}
+                          >
+                              (Gérer les règles)
+                          </button>
+                      </div>
+                      
+                      <select onChange={handleTagSelect} value="" className="custom-select">
+                          <option value="" disabled>Sélectionner un tag...</option>
+                          {availableTags.length === 0 && <option value="" disabled>Aucun tag trouvé</option>}
+                          {availableTags.filter(t => t.trim() !== "").map(tag => (
+                              <option key={tag} value={tag}>{tag}</option>
+                          ))}
+                      </select>
+                      
+                      <div className="cl-active-filters">
+                          {tagFilters.map((filter, index) => {
+                              const customColor = tagColors[filter.text.toLowerCase()] || (filter.mode === "include" ? "#4CAF50" : "#F44336");
+                              return (
+                                  <div key={index} className="cl-filter-badge" style={{
+                                      background: filter.mode === "include" ? "var(--bg-success-light, #1b3a24)" : "var(--bg-danger-light, #3a1b1b)",
+                                      borderColor: customColor
+                                  }}>
+                                      <span className="cl-filter-badge-text" style={{ color: customColor }}>
+                                          {filter.text.toUpperCase()}
+                                      </span>
+                                      <button 
+                                          onClick={() => toggleTagMode(index)} 
+                                          className="cl-filter-badge-btn"
+                                          style={{ color: filter.mode === "include" ? "#4CAF50" : "#F44336" }}
+                                          title="Basculer entre Inclus (EST) et Exclus (NON)"
+                                      >
+                                          {filter.mode === "include" ? "EST" : "NON"}
+                                      </button>
+                                      <button onClick={() => removeTagFilter(index)} className="cl-filter-badge-close">✕</button>
+                                  </div>
+                              )
+                          })}
+                      </div>
+                  </div>
+
+                  <div className="cl-field-container">
+                      <label className="cl-label">Légalité</label>
+                      <div style={{display: "flex", gap: "8px"}}>
+                          <div style={{flex: 2}}>
+                              <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)} className="custom-select">
+                                  {FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                              </select>
+                          </div>
+                          <div style={{flex: 1.2}}>
+                              <select value={legalityStatus} onChange={(e) => setLegalityStatus(e.target.value)} className="custom-select">
+                                  <option value="true">Légal</option>
+                                  <option value="false">Ban</option>
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                      <div style={{ flex: 1 }}>
+                          <label className="cl-label">Force</label>
+                          <div style={{display: "flex"}}>
+                              <select value={powerOp} onChange={(e) => setPowerOp(e.target.value)} className="custom-select select-prefix">
+                                  <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
+                              </select>
+                              <input type="text" value={powerFilter} onChange={(e) => setPowerFilter(e.target.value)} className="custom-input input-suffix" />
+                          </div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                          <label className="cl-label">Endu.</label>
+                          <div style={{display: "flex"}}>
+                              <select value={toughnessOp} onChange={(e) => setToughnessOp(e.target.value)} className="custom-select select-prefix">
+                                  <option value="=">=</option><option value=">">&gt;</option><option value=">=">&ge;</option><option value="<">&lt;</option>
+                              </select>
+                              <input type="text" value={toughnessFilter} onChange={(e) => setToughnessFilter(e.target.value)} className="custom-input input-suffix" />
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="cl-field-container cl-sort-section">
+                      <label className="cl-label">Trier par</label>
+                      <div className="cl-sort-wrapper">
+                          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="custom-select" style={{ flex: 1 }}>
+                              <option value="name">Nom</option>
+                              <option value="count">Quantité possédée</option>
+                              <option value="price">Prix estimé</option>
+                              <option value="set">Extension (Grille)</option>
+                              <option value="tags">Tags (Grille)</option>
+                          </select>
+                          <button 
+                              onClick={() => setSortDir(sortDir === 1 ? -1 : 1)} 
+                              className="btn-secondary cl-btn-sort-dir"
+                              title={sortDir === 1 ? "Croissant (Vieux -> Récent / A-Z)" : "Décroissant (Récent -> Vieux / Z-A)"}
+                          >
+                              {sortDir === 1 ? "v" : "^"}
+                          </button>
+                      </div>
+                  </div>
+                  
+                  <div style={{ height: "10px" }}></div>
+              </div>
+
+              <div className="cl-sidebar-footer">
+                 <p className="cl-sidebar-footer-text">Cartes affichées : <strong>{cards.length}</strong></p>
+              </div>
+            </div>
+
+            {/* ZONE DE RÉSULTATS DROITE */}
+            <div className="cl-results-wrapper">
+              
+              {setFilter && sortBy !== "set" && sortBy !== "tags" && (
+                  <div className="cl-active-set-banner">
+                      <div className="cl-active-set-badge">
+                          Extension filtrée : <span style={{ color: "var(--primary)", marginLeft: "5px" }}>{setFilter.toUpperCase()}</span>
+                          <button onClick={() => setSetFilter("")} className="cl-active-set-close" title="Retirer ce filtre">✕</button>
+                      </div>
+                  </div>
+              )}
+
+              <div className="cl-scrollable-area">
+                  {sortBy === "set" ? (
+                      <div className="cl-sets-grid">
+                          {loading ? (
+                              <div className="cl-empty-msg">Chargement des extensions...</div>
+                          ) : userSets.length === 0 ? (
+                              <div className="cl-empty-msg">Aucune extension trouvée.</div>
+                          ) : (
+                              (() => {
+                                  let currentYear = null;
+                                  return userSets.map((set) => {
+                                      const setYear = set.released_at ? set.released_at.substring(0, 4) : "Inconnu";
+                                      const showYearHeader = setYear !== currentYear;
+                                      currentYear = setYear;
+
+                                      return (
+                                          <React.Fragment key={set.set_code}>
+                                              {showYearHeader && (
+                                                  <div className="cl-set-year-header">{setYear}</div>
+                                              )}
+                                              <div 
+                                                  onClick={() => { setSetFilter(set.set_code); setSortBy("name"); }} 
+                                                  className="cl-set-item"
+                                              >
+                                                  <img src={`https://svgs.scryfall.io/sets/${set.set_code}.svg`} alt={set.set_name} className="cl-set-icon" onError={(e) => e.target.style.display = 'none'} />
+                                                  <div className="cl-set-info">
+                                                      <span className="cl-set-name" title={set.set_name}>{set.set_name}</span>
+                                                      <span className="cl-set-count">{set.count} carte{set.count > 1 ? 's' : ''}</span>
+                                                  </div>
+                                              </div>
+                                          </React.Fragment>
+                                      );
+                                  });
+                              })()
+                          )}
+                      </div>
+                  ) : sortBy === "tags" ? (
+                      <div className="cl-tags-grid">
+                          {loading ? (
+                              <div className="cl-empty-msg">Chargement des tags...</div>
+                          ) : tagsSummary.length === 0 ? (
+                              <div className="cl-empty-msg">Aucun tag trouvé.</div>
+                          ) : (
+                              tagsSummary.map(tagObj => {
+                                  const currentTagColor = tagColors[tagObj.tag_name.toLowerCase()] || "var(--primary)";
+                                  return (
+                                      <div key={tagObj.tag_name}
+                                           onClick={() => {
+                                               if (tagObj.tag_name !== "Sans tag") {
+                                                   if (!tagFilters.find(t => t.text === tagObj.tag_name)) {
+                                                       setTagFilters([...tagFilters, { text: tagObj.tag_name, mode: "include" }]);
+                                                   }
+                                               }
+                                               setSortBy("name");
+                                           }}
+                                           className="cl-tag-item"
+                                           style={{ '--tag-color': currentTagColor }}
+                                      >
+                                          <h3 className="cl-tag-title">{tagObj.tag_name}</h3>
+                                          <div className="cl-tag-count">{tagObj.count} carte{tagObj.count > 1 ? 's' : ''}</div>
+                                      </div>
+                                  );
+                              })
+                          )}
+                      </div>
+                  ) : (
+                      <div className="cl-cards-grid">
+                          {cards.map((card, index) => (
+                              <div 
+                                ref={cards.length === index + 1 ? lastCardElementRef : null} 
+                                key={card._id || `${card.id}_${card.is_foil}`} 
+                                className="cl-card-item"
+                                onClick={() => setSelectedCard({ id: card.id || card._id, is_foil: card.is_foil })} 
+                              >
+                                 <div className="cl-card-content">
+                                      <div className="cl-card-img-wrapper">
+                                        {card.image_normal ? (
+                                          <img src={card.image_normal} alt={card.name} className="cl-card-img" loading="lazy" />
+                                        ) : (
+                                          <div className="cl-card-no-img">Pas d'image</div>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="cl-card-info-wrapper">
+                                          <div className="cl-card-title-row" title={card.name}>
+                                            {card.name}
+                                            {card.is_foil && <span className="cl-card-foil-badge">F</span>}
+                                          </div>
+                                          <div className="cl-card-meta-row">
+                                              <span className="cl-card-set-text" title={card.set_name}>
+                                                  {sortBy === "price" ? (
+                                                      card.prices?.eur ? <span className="cl-card-price">{card.prices.eur} €</span> : "N/A"
+                                                  ) : (
+                                                      card.set_name || "?"
+                                                  )}
+                                              </span>
+                                              <span className="cl-card-qty">x{card.count || 1}</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                          {loading && <div className="cl-empty-msg">Chargement...</div>}
+                          {!loading && cards.length === 0 && <div className="cl-empty-msg mt">Aucune carte trouvée.</div>}
+                      </div>
+                  )}
+              </div>
             </div>
           </div>
 
@@ -673,7 +685,7 @@ export default function CardsList() {
               cardId={selectedCard.id} 
               isFoil={selectedCard.is_foil}
               defaultCount={cards[selectedIndex]?.count || 1}
-              tagColors={tagColors} // NOUVEAU
+              tagColors={tagColors}
               onClose={handleCloseModal} 
               onNext={handleNextCard}
               onPrev={handlePrevCard}
