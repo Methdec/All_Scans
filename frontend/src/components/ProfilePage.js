@@ -57,9 +57,41 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
   const [mfaCode, setMfaCode] = useState("");
   const [mfaDisablePassword, setMfaDisablePassword] = useState("");
 
+  // On gère les images de fond sans données par défaut
+  const [bgCards, setBgCards] = useState([]);
+  const [isBgLoading, setIsBgLoading] = useState(true);
+
   useEffect(() => {
       if (user?.nom) setNomData({ nom: user.nom });
   }, [user]);
+
+  // Appel API pour récupérer les 15 cartes les plus chères
+  useEffect(() => {
+    const fetchTopCards = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/cards/search?sort_by=price&sort_dir=-1&limit=15&page=1`, {
+                credentials: "include"
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.cards && data.cards.length > 0) {
+                    const images = data.cards
+                        .map(c => c.image_normal || c.image_art_crop || c.image_small)
+                        .filter(img => img !== null && img !== undefined);
+                    
+                    if(images.length > 0) {
+                        setBgCards(images);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Erreur lors du chargement des cartes de fond :", err);
+        } finally {
+            setIsBgLoading(false);
+        }
+    };
+    fetchTopCards();
+  }, []);
 
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
@@ -279,13 +311,17 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
     }
   };
 
-  const handleDeleteCollection = async () => {
-      if (deleteCollectionConfirm !== "SUPPRIMER") return;
+  const handleDeleteCollection = async (e) => {
+      if (e) e.preventDefault(); 
+      
+      if (deleteCollectionConfirm.trim().toUpperCase() !== "SUPPRIMER") return;
+
       try {
           const res = await fetch(`${API_BASE_URL}/auth/me/collection`, { method: "DELETE", credentials: "include" });
           const data = await res.json();
           if (res.ok) {
               showNotification(data.message || "Collection vidée !");
+              setBgCards([]); 
               closeModal();
           } else {
               showNotification(data.detail || "Erreur lors de la suppression", "error");
@@ -293,8 +329,11 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
       } catch (err) { showNotification("Erreur serveur", "error"); }
   };
 
-  const handleDeleteAccount = async () => {
-      if (deleteAccountConfirm !== "SUPPRIMER") return;
+  const handleDeleteAccount = async (e) => {
+      if (e) e.preventDefault();
+      
+      if (deleteAccountConfirm.trim().toUpperCase() !== "SUPPRIMER") return;
+
       try {
           const res = await fetch(`${API_BASE_URL}/auth/me`, { method: "DELETE", credentials: "include" });
           if (res.ok) {
@@ -364,9 +403,51 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
 
   const defaultAvatar = "https://cards.scryfall.io/art_crop/front/0/0/00020b05-ecb9-4603-8cc1-8cfa7a14befc.jpg";
 
+  const hasBgCards = bgCards.length > 0;
+  const isDeleteCollectionValid = deleteCollectionConfirm.trim().toUpperCase() === "SUPPRIMER";
+  const isDeleteAccountValid = deleteAccountConfirm.trim().toUpperCase() === "SUPPRIMER";
+
   return (
-    <div className="pp-container">
-      <div className="pp-content">
+    <div className="pp-container" style={{ background: "transparent", minHeight: "calc(100vh - 60px)" }}>
+      
+      {/* FOND ANIMÉ */}
+      {!isBgLoading && hasBgCards && (
+        <div 
+            className="auth-background" 
+            style={{ 
+            position: "fixed", 
+            top: 0, left: 0, width: "100%", height: "100%", 
+            zIndex: -1, pointerEvents: "none"
+            }}
+        >
+            <div key={`bg-${bgCards.length}`} style={{ opacity: 0.8, width: '100%', height: '100%', position: 'absolute' }}>
+                {bgCards.map((img, index) => {
+                    const leftPosition = 5 + (index * 85) / Math.max(1, bgCards.length - 1); 
+                    const duration = 16 + (index % 5) * 4; 
+                    const delay = -(index * 3.5); 
+
+                    return (
+                        <div 
+                            key={index}
+                            className="floating-card"
+                            style={{ 
+                                left: `${leftPosition}%`, 
+                                animation: `floatUp ${duration}s linear ${delay}s infinite`,
+                                backgroundImage: `url('${img}')`,
+                                position: "absolute",
+                                bottom: "-100px", 
+                                width: "140px", 
+                                height: "200px"
+                            }}
+                        ></div>
+                    );
+                })}
+            </div>
+        </div>
+      )}
+
+      {/* Le conteneur du contenu de profil (relatif pour passer au-dessus du fond) */}
+      <div className="pp-content" style={{ position: "relative", zIndex: 10 }}>
 
         <div className="pp-section">
             <h3 className="pp-section-title">
@@ -700,19 +781,35 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
         </div>
       )}
 
+      {/* --- CORRECTION DES MODALES DE SUPPRESSION (FORM) --- */}
       {activeModal === "deleteCollection" && (
         <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content pp-modal-delete" onClick={e => e.stopPropagation()}>
                 <h3 className="pp-modal-delete-title">Vider la collection</h3>
                 <p className="pp-modal-delete-desc">Cette action est irréversible. Toutes vos cartes enregistrées seront supprimées. Vos decks seront conservés mais s'afficheront comme virtuels si les cartes manquent.</p>
-                <div className="pp-modal-delete-group">
-                    <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
-                    <input type="text" className={`pp-modal-delete-input ${deleteCollectionConfirm === "SUPPRIMER" ? "success" : "default"}`} placeholder="SUPPRIMER" value={deleteCollectionConfirm} onChange={e => setDeleteCollectionConfirm(e.target.value)} autoFocus />
-                </div>
-                <div className="pp-modal-delete-actions">
-                    <button className="btn-secondary" onClick={closeModal}>Annuler</button>
-                    <button className={`btn-secondary pp-btn-delete-confirm ${deleteCollectionConfirm === "SUPPRIMER" ? "active" : "inactive"}`} disabled={deleteCollectionConfirm !== "SUPPRIMER"} onClick={handleDeleteCollection}>Vider ma collection</button>
-                </div>
+                <form onSubmit={handleDeleteCollection}>
+                    <div className="pp-modal-delete-group">
+                        <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
+                        <input 
+                            type="text" 
+                            className={`pp-modal-delete-input ${isDeleteCollectionValid ? "success" : "default"}`} 
+                            placeholder="SUPPRIMER" 
+                            value={deleteCollectionConfirm} 
+                            onChange={e => setDeleteCollectionConfirm(e.target.value)} 
+                            autoFocus 
+                        />
+                    </div>
+                    <div className="pp-modal-delete-actions">
+                        <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
+                        <button 
+                            type="submit" 
+                            className={`btn-secondary pp-btn-delete-confirm ${isDeleteCollectionValid ? "active" : "inactive"}`} 
+                            disabled={!isDeleteCollectionValid}
+                        >
+                            Vider ma collection
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
       )}
@@ -722,20 +819,36 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
             <div className="modal-content pp-modal-delete" onClick={e => e.stopPropagation()}>
                 <h3 className="pp-modal-delete-title">Supprimer le compte</h3>
                 <p className="pp-modal-delete-desc">Cette action détruira complètement votre profil, vos decks, et toute votre collection sans aucun moyen de retour en arrière.</p>
-                <div className="pp-modal-delete-group">
-                    <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer l'adieu :</label>
-                    <input type="text" className={`pp-modal-delete-input ${deleteAccountConfirm === "SUPPRIMER" ? "success" : "default"}`} placeholder="SUPPRIMER" value={deleteAccountConfirm} onChange={e => setDeleteAccountConfirm(e.target.value)} autoFocus />
-                </div>
-                <div className="pp-modal-delete-actions">
-                    <button className="btn-secondary" onClick={closeModal}>Annuler</button>
-                    <button className={`btn-secondary pp-btn-delete-confirm ${deleteAccountConfirm === "SUPPRIMER" ? "active" : "inactive"}`} disabled={deleteAccountConfirm !== "SUPPRIMER"} onClick={handleDeleteAccount}>Supprimer mon compte</button>
-                </div>
+                <form onSubmit={handleDeleteAccount}>
+                    <div className="pp-modal-delete-group">
+                        <label className="pp-modal-delete-label">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer l'adieu :</label>
+                        <input 
+                            type="text" 
+                            className={`pp-modal-delete-input ${isDeleteAccountValid ? "success" : "default"}`} 
+                            placeholder="SUPPRIMER" 
+                            value={deleteAccountConfirm} 
+                            onChange={e => setDeleteAccountConfirm(e.target.value)} 
+                            autoFocus 
+                        />
+                    </div>
+                    <div className="pp-modal-delete-actions">
+                        <button type="button" className="btn-secondary" onClick={closeModal}>Annuler</button>
+                        <button 
+                            type="submit" 
+                            className={`btn-secondary pp-btn-delete-confirm ${isDeleteAccountValid ? "active" : "inactive"}`} 
+                            disabled={!isDeleteAccountValid}
+                        >
+                            Supprimer mon compte
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
       )}
 
+      {/* LA CLASSE pp-toast EST BIEN REMISE ICI ! */}
       {notification.show && (
-        <div className={` ${notification.type}`}>
+        <div className={`pp-toast ${notification.type}`}>
           {notification.message}
         </div>
       )}

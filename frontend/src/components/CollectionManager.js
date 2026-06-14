@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../theme.css";
 import { API_BASE_URL } from '../utils/api';
+import RecapModal from "./RecapModal"; // <-- L'IMPORT MANQUANT ÉTAIT LÀ !
 
 const TYPE_PRIORITY = [
   "Creature", "Planeswalker", "Instant", "Sorcery", 
@@ -158,49 +159,6 @@ export default function CollectionManager() {
           setActionModal({ isOpen: true, type: "error", status: "error", message: "Impossible de joindre le serveur pour générer le bilan." });
       }
   };
-
-  const recapStats = useMemo(() => {
-    if (!recapModalData || recapModalData._loading || !recapModalData.cards) return null;
-
-    let totalPrice = 0;
-    let maxPrice = 0;
-    let mostExpensiveCard = null;
-    let typeDistribution = {};
-    let manaCurve = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, "6+": 0 };
-    let maxManaCurveCount = 0;
-    let totalCardsImported = 0;
-
-    recapModalData.cards.forEach(card => {
-        const qty = card.quantity || 1;
-        totalCardsImported += qty;
-
-        const price = parseFloat(card.prices?.eur || card.prices?.usd || 0);
-        totalPrice += price * qty;
-
-        if (price > maxPrice) {
-            maxPrice = price;
-            mostExpensiveCard = card;
-        }
-
-        const cat = getCardCategory(card.type_line);
-        typeDistribution[cat] = (typeDistribution[cat] || 0) + qty;
-
-        if (cat !== "Land") {
-            const cmc = Math.floor(card.cmc || 0);
-            const key = cmc >= 6 ? "6+" : cmc;
-            manaCurve[key] += qty;
-            if (manaCurve[key] > maxManaCurveCount) {
-                maxManaCurveCount = manaCurve[key];
-            }
-        }
-    });
-
-    const sortedTypes = Object.entries(typeDistribution)
-        .sort((a, b) => b[1] - a[1])
-        .map(([type, count]) => ({ type, count }));
-
-    return { totalPrice, mostExpensiveCard, maxPrice, sortedTypes, manaCurve, maxManaCurveCount, totalCardsImported };
-  }, [recapModalData]);
 
   const handleStartImport = () => {
     if (!importText.trim() && !importFile) return;
@@ -471,91 +429,13 @@ export default function CollectionManager() {
 
     </div>
 
-    {/* MODALE DU RECAPITULATIF BDD */}
+    {/* MODALE DU RECAPITULATIF BDD DEPORTEE ICI */}
     {recapModalData && (
-        <div className="modal-overlay" onClick={() => setRecapModalData(null)}>
-            <div className="modal-content cm-modal-recap-content" onClick={e => e.stopPropagation()}>
-                
-                {recapModalData._loading ? (
-                    <div style={{ textAlign: "center", padding: "50px", color: "var(--text-muted)" }}>Génération du rapport en cours...</div>
-                ) : !recapStats ? (
-                    <div style={{ textAlign: "center", padding: "50px", color: "var(--text-muted)" }}>
-                        <p>Aucune donnée détaillée à analyser pour cet événement.</p>
-                        <button className="btn-secondary" onClick={() => setRecapModalData(null)} style={{ marginTop: "20px" }}>Fermer</button>
-                    </div>
-                ) : (
-                    <>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "15px", marginBottom: "25px" }}>
-                            <h2 style={{ margin: 0, color: "var(--primary)", display: "flex", alignItems: "center", gap: "10px" }}>
-                                Bilan de l'opération
-                            </h2>
-                            <button onClick={() => setRecapModalData(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}>✕</button>
-                        </div>
-
-                        <p style={{ color: "var(--text-main)", marginBottom: "20px", fontSize: "1.1rem" }}>{recapModalData.log_details}</p>
-
-                        <div className="cm-stat-grid-2">
-                            <div className="cm-stat-box">
-                                <p className="cm-stat-box-label">Valeur Estimée Ajoutée</p>
-                                <p className="cm-total-price">
-                                    {recapStats.totalPrice.toFixed(2)} €
-                                </p>
-                            </div>
-
-                            <div className="cm-stat-box cm-stat-box-flex">
-                                <p className="cm-stat-box-label">Plus belle trouvaille</p>
-                                {recapStats.mostExpensiveCard ? (
-                                    <div style={{ textAlign: "center" }}>
-                                        <p className="cm-top-card-name" title={recapStats.mostExpensiveCard.name}>{recapStats.mostExpensiveCard.name}</p>
-                                        <p className="cm-top-card-price">{recapStats.maxPrice.toFixed(2)} €</p>
-                                    </div>
-                                ) : (
-                                    <p style={{ margin: 0, color: "var(--text-muted)" }}>N/A</p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="cm-stat-grid-large">
-                            <div className="cm-stat-box" style={{ padding: "25px", textAlign: "left" }}>
-                                <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Courbe de Mana (hors terrains)</h3>
-                                <div className="cm-mana-curve-container">
-                                    {Object.entries(recapStats.manaCurve).map(([cmc, count]) => {
-                                        const heightPercent = recapStats.maxManaCurveCount > 0 ? (count / recapStats.maxManaCurveCount) * 100 : 0;
-                                        return (
-                                            <div key={cmc} className="cm-mana-bar-col">
-                                                <div className="cm-mana-bar" style={{ height: `${Math.max(heightPercent, 2)}%` }}></div>
-                                                {count > 0 && <span className="cm-mana-bar-count" style={{ top: `calc(100% - ${Math.max(heightPercent, 2)}% - 20px)` }}>{count}</span>}
-                                                <span className="cm-mana-bar-label">{cmc}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="cm-stat-box" style={{ padding: "25px", textAlign: "left" }}>
-                                <h3 style={{ margin: "0 0 20px 0", color: "var(--text-main)" }}>Répartition de l'Import</h3>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                                    {recapStats.sortedTypes.map(({ type, count }) => {
-                                        const percentage = ((count / recapStats.totalCardsImported) * 100).toFixed(1);
-                                        return (
-                                            <div key={type} className="cm-type-row">
-                                                <div className="cm-type-row-header">
-                                                    <span style={{ color: "var(--text-main)", fontWeight: "bold" }}>{TYPE_TRANSLATIONS[type] || type}</span>
-                                                    <span style={{ color: "var(--text-muted)" }}>{count} cartes ({percentage}%)</span>
-                                                </div>
-                                                <div className="cm-type-bar-bg">
-                                                    <div style={{ height: "100%", width: `${percentage}%`, background: type === "Land" ? "#4CAF50" : type === "Creature" ? "#FF9800" : "var(--primary)", borderRadius: "4px" }}></div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
+        <RecapModal 
+            recapData={recapModalData} 
+            loading={recapModalData._loading} 
+            onClose={() => setRecapModalData(null)} 
+        />
     )}
 
     {/* MODALES D'ACTIONS (CONFIRMATION, ERREUR...) */}

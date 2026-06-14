@@ -109,7 +109,7 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
       
       <div className="modal-content card-modal-content">
         
-        <button onClick={onClose} className="card-close-btn" title="Fermer">X</button>
+        <button onClick={onClose} className="card-close-btn" title="Fermer">✕</button>
 
         {hasPrev && <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="card-nav-btn card-nav-prev" title="Carte précédente">&#10094;</button>}
         {hasNext && <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="card-nav-btn card-nav-next" title="Carte suivante">&#10095;</button>}
@@ -177,7 +177,7 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
           )}
 
           {deckContext && (
-            <div>
+            <div className="mt-15">
                 <h4 className="m-0 mb-10 text-lg text-primary">Gestion du Deck</h4>
                 <div className="deck-mgmt-box">
                     <div className="flex justify-between items-center mb-10">
@@ -199,13 +199,6 @@ export default function CardSearchDetailModal({ card: propCard, cardId, onClose,
                 </div>
             </div>
           )}
-
-          <div className="mt-auto border-top">
-             <div className="collection-mgmt-row">
-                 <span className="text-sm" style={{ color: "var(--text-muted)" }}>En collection :</span>
-                 <span className="text-lg font-bold text-danger">0</span>
-             </div>
-          </div>
 
         </div>
       </div>

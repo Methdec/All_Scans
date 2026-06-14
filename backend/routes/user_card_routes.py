@@ -93,7 +93,6 @@ async def perform_import(data: List, user_id: str):
         cards_found = []
         cards_not_found = []
         
-        # NOUVEAU : On récupère les règles de l'utilisateur avant la boucle
         user_rules = list(tag_rules_collection.find({"user_id": uid}))
         
         for idx, scryfall_data in enumerate(fetched_cards):
@@ -103,7 +102,6 @@ async def perform_import(data: List, user_id: str):
             cleaned = extract_card_fields(scryfall_data)
             card_id = cleaned.get("id")
             
-            # NOUVEAU : On calcule les tags automatiques pour cette carte
             auto_tags = get_automated_tags(cleaned, user_rules)
             
             set_code = str(scryfall_data.get("set", "")).lower()
@@ -141,13 +139,11 @@ async def perform_import(data: List, user_id: str):
                     })
                     
                     if existing:
-                        # NOUVEAU : Ajout des tags en cas de mise à jour
                         update_doc = {"$inc": {"count": qty}}
                         if auto_tags:
                             update_doc["$addToSet"] = {"tags": {"$each": auto_tags}}
                         user_cards_collection.update_one({"_id": existing["_id"]}, update_doc)
                     else:
-                        # NOUVEAU : Ajout des tags en cas de création
                         user_cards_collection.insert_one({
                             "user_id": uid,
                             "card_id": card_id,
@@ -173,7 +169,7 @@ async def perform_import(data: List, user_id: str):
                             "legalities": cleaned.get("legalities", {}),
                             "prices": cleaned.get("prices", {}),
                             "purchase_uris": cleaned.get("purchase_uris", {}),
-                            "tags": auto_tags # <-- INCLUSION ICI
+                            "tags": auto_tags
                         })
                     
                     cards_found.append({
@@ -261,6 +257,7 @@ async def update_user_card_count(card_id: str, body: dict = Body(...), user_id: 
         return {"message": "OK"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/usercards")
 async def add_user_card(request: Request, user_id: str = Depends(get_current_user)):
     try:
@@ -283,7 +280,6 @@ async def add_user_card(request: Request, user_id: str = Depends(get_current_use
             "is_foil": is_foil
         })
         
-        # NOUVEAU : Application du moteur de tags
         user_rules = list(tag_rules_collection.find({"user_id": uid}))
         auto_tags = get_automated_tags(cleaned, user_rules)
         print(f"[Tags] Ajout manuel de {cleaned.get('name')} -> Tags trouvés : {auto_tags}")
@@ -319,7 +315,7 @@ async def add_user_card(request: Request, user_id: str = Depends(get_current_use
                 "legalities": cleaned.get("legalities", {}),
                 "prices": cleaned.get("prices", {}),
                 "purchase_uris": cleaned.get("purchase_uris", {}),
-                "tags": auto_tags # <-- INCLUSION ICI
+                "tags": auto_tags
             })
         return {"message": "Ajoute"}
     except Exception as e:
@@ -417,14 +413,11 @@ async def export_user_collection(format: str = "txt", user_id: str = Depends(get
         raise HTTPException(status_code=500, detail="Erreur interne lors de l'exportation.")
     
 
-
 @router.get("/me/collection/tags")
 async def get_my_collection_tags(user_id: str = Depends(get_current_user)):
-    """Recupere la liste de tous les tags uniques utilises dans la collection de l'utilisateur."""
     tags = user_cards_collection.distinct("tags", {"user_id": user_id})
     clean_tags = [t for t in tags if t]
     return {"tags": sorted(clean_tags)}
-
 
 
 @router.post("/{card_id}/tags")
@@ -435,14 +428,12 @@ async def add_tag_to_card(card_id: str, data: dict = Body(...), user_id: str = D
         
     clean_tag = tag.strip().lower()
     
-    # Recherche flexible : soit l'ObjectId MongoDB, soit l'UUID Scryfall
     query = {"user_id": user_id}
     if ObjectId.is_valid(card_id):
         query["_id"] = ObjectId(card_id)
     else:
         query["card_id"] = card_id
         
-    # update_many permet de taguer toutes les versions (ex: foil et non-foil) d'un coup
     result = user_cards_collection.update_many(
         query,
         {"$addToSet": {"tags": clean_tag}}
@@ -452,6 +443,7 @@ async def add_tag_to_card(card_id: str, data: dict = Body(...), user_id: str = D
         raise HTTPException(status_code=404, detail="Carte introuvable dans votre collection.")
         
     return {"message": "Tag ajoute avec succes", "tag": clean_tag}
+
 
 @router.delete("/{card_id}/tags")
 async def remove_tag_from_card(card_id: str, tag: str = Query(...), user_id: str = Depends(get_current_user)):
@@ -472,8 +464,6 @@ async def remove_tag_from_card(card_id: str, tag: str = Query(...), user_id: str
         raise HTTPException(status_code=404, detail="Carte introuvable dans votre collection.")
         
     return {"message": "Tag supprime avec succes"}
-
-
 
 
 @router.post("/usercards/{old_card_id}/swap")
@@ -513,8 +503,15 @@ async def swap_card_version(old_card_id: str, data: dict = Body(...), user_id: s
 
         # 4. Appliquer le moteur de tags automatiques sur la NOUVELLE version
         user_rules = list(tag_rules_collection.find({"user_id": uid}))
-        # On nettoie les champs de la nouvelle carte pour le moteur
-        cleaned_new_card = extract_card_fields(new_card_data)
+        
+        # CORRECTION MAJEURE ICI :
+        # Si la carte vient de la route "prints", elle est déjà "nettoyée" (elle a "image_normal" au lieu de "image_uris").
+        # Si on passe une carte déjà nettoyée dans extract_card_fields, ça l'efface complètement.
+        if "image_normal" in new_card_data and "image_uris" not in new_card_data:
+            cleaned_new_card = new_card_data
+        else:
+            cleaned_new_card = extract_card_fields(new_card_data)
+            
         auto_tags = get_automated_tags(cleaned_new_card, user_rules)
         
         # Fusionner les anciens tags manuels et les nouveaux tags automatiques
@@ -545,6 +542,7 @@ async def swap_card_version(old_card_id: str, data: dict = Body(...), user_id: s
                 "$addToSet": {"tags": {"$each": final_tags}}
             })
         else:
+            # CORRECTION MAJEURE 2 : On s'assure de réinsérer TOUS les champs manquants
             user_doc = {
                 "user_id": uid,
                 "card_id": new_card_id,
@@ -557,13 +555,20 @@ async def swap_card_version(old_card_id: str, data: dict = Body(...), user_id: s
                 "set_name": cleaned_new_card.get("set_name"),
                 "collector_number": cleaned_new_card.get("collector_number"),
                 "image_normal": cleaned_new_card.get("image_normal"),
+                "image_art_crop": cleaned_new_card.get("image_art_crop"),
+                "image_small": cleaned_new_card.get("image_small"),
                 "rarity": cleaned_new_card.get("rarity"),
                 "colors": cleaned_new_card.get("colors", []),
                 "type_line": cleaned_new_card.get("type_line", ""),
                 "oracle_text": cleaned_new_card.get("oracle_text", ""),
+                "keywords": cleaned_new_card.get("keywords", []),
                 "cmc": cleaned_new_card.get("cmc", 0),
+                "power": cleaned_new_card.get("power", ""),
+                "toughness": cleaned_new_card.get("toughness", ""),
+                "legalities": cleaned_new_card.get("legalities", {}),
                 "prices": cleaned_new_card.get("prices", {}),
-                "tags": final_tags # Applique les tags calcules ici
+                "purchase_uris": cleaned_new_card.get("purchase_uris", {}),
+                "tags": final_tags
             }
             user_cards_collection.insert_one(user_doc)
 

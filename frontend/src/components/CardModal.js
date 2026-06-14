@@ -44,11 +44,11 @@ function DeckPickerModal({ onClose, onSelect }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 99999 }}>
       <div className="modal-box deck-picker-box" onClick={e => e.stopPropagation()}>
         <div className="deck-picker-header">
           <h3 className="m-0 text-lg">Ajouter au deck...</h3>
-          <button onClick={onClose} className="btn-close-transparent">X</button>
+          <button onClick={onClose} className="btn-close-transparent">✕</button>
         </div>
         <div className="deck-picker-list">
           {loading ? (
@@ -309,12 +309,6 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   const handleSwap = async (newCard) => {
     if (newCard.id === card.id) return; 
 
-    if (!card.owned) {
-        setNotification({type: "error", message: "Ajoutez d'abord la carte à votre collection."});
-        setTimeout(() => setNotification(null), 3000);
-        return;
-    }
-
     try {
        let swapQty = isEditing ? parseInt(editCount) || 1 : 1;
        if (swapQty <= 0) return;
@@ -360,6 +354,32 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       return <span style={{color: "var(--text-muted)"}}>--</span>;
   };
 
+  // Fonction partagée pour injecter la même structure de liste d'éditions sans duplication lourde de JSX
+  const renderReprintsList = () => {
+      if (!showReprints) return null;
+      return (
+          <div className="reprint-gallery mt-10">
+              {loadingReprints ? (
+                  <div className="p-10 text-center w-full">Recherche des versions...</div>
+              ) : (
+                  reprints.map(rp => (
+                      <div 
+                        key={rp.id} 
+                        onClick={() => handleSwap(rp)} 
+                        className={`reprint-item ${rp.id === card.id ? 'active' : ''}`}
+                        title={`Basculer sur l'édition ${rp.set.toUpperCase()}`}
+                      >
+                         <img src={rp.image_normal || rp.image_border_crop || DEFAULT_CARD_BACK} className="reprint-item-img" alt={rp.set} />
+                         <div className="reprint-item-text" style={{ color: rp.id === card.id ? "var(--primary)" : "var(--text-main)", fontWeight: rp.id === card.id ? "bold" : "normal" }}>
+                           {rp.set.toUpperCase()} #{rp.collector_number}
+                         </div>
+                      </div>
+                  ))
+              )}
+          </div>
+      );
+  };
+
   if (loading && !card && !error) return (
       <div className="modal-overlay" onClick={handleManualClose}>
           <div className="modal-box justify-center items-center" style={{ background: "transparent", boxShadow: "none" }} onClick={e => e.stopPropagation()}>
@@ -401,7 +421,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       
       <div className="modal-content card-modal-content">
         
-        <button onClick={handleManualClose} className="card-close-btn" title="Fermer">X</button>
+        <button onClick={handleManualClose} className="card-close-btn" title="Fermer">✕</button>
 
         {hasPrev && <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="card-nav-btn card-nav-prev" title="Carte précédente">&#10094;</button>}
         {hasNext && <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="card-nav-btn card-nav-next" title="Carte suivante">&#10095;</button>}
@@ -442,39 +462,24 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         {/* COLONNE 2 : INFOS & TEXTE */}
         <div className="card-col-info">
           
-          {/* TITRE PC UNIQUEMENT */}
           <h2 className="card-title-lg desktop-card-title" style={{ opacity: (isFlipping || imageLoading) ? 0 : 1 }}>
             {displayedName}
             {isFoil === true && <span className="foil-badge">[F] Foil</span>}
           </h2>
 
           <div className="card-details-section">
-            <div className="set-link" onClick={fetchReprints} title="Cliquez pour voir les autres éditions">
+            {/* SUR PC : L'ÉDITION RESTE SOUS LE TITRE */}
+            <div className="set-link modal-desktop-only" onClick={fetchReprints} title="Cliquez pour voir les autres éditions" style={{ cursor: "pointer", display: "inline-block", marginBottom: "10px" }}>
                 <span>
                     <strong style={{ color: "var(--text-muted)" }}>Set : </strong> 
-                    <span style={{ textDecoration: "underline" }}>{card.set_name || "?"} ({card.set?.toUpperCase() || "?"} #{card.collector_number || "?"})</span>
+                    <span style={{ textDecoration: "underline", color: "var(--primary)" }}>{card.set_name || "?"} ({card.set?.toUpperCase() || "?"} #{card.collector_number || "?"})</span>
                 </span>
             </div>
-
-            {/* GALERIE D'IMPRESSIONS */}
-            {showReprints && (
-                <div className="reprint-gallery">
-                    {loadingReprints ? <div className="p-10 text-center w-full">Recherche des versions...</div> :
-                     reprints.map(rp => (
-                        <div 
-                          key={rp.id} 
-                          onClick={() => handleSwap(rp)} 
-                          className={`reprint-item ${rp.id === card.id ? 'active' : ''}`}
-                          title={`Basculer sur l'édition ${rp.set.toUpperCase()}`}
-                        >
-                           <img src={rp.image_normal || rp.image_border_crop || DEFAULT_CARD_BACK} className="reprint-item-img" alt={rp.set} />
-                           <div className="reprint-item-text" style={{ color: rp.id === card.id ? "var(--primary)" : "var(--text-main)", fontWeight: rp.id === card.id ? "bold" : "normal" }}>
-                             {rp.set.toUpperCase()} #{rp.collector_number}
-                           </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            
+            {/* SUR PC : LA GALERIE S'AFFICHE ICI */}
+            <div className="modal-desktop-only">
+                {renderReprintsList()}
+            </div>
 
             <div className="mt-5"><strong>Langue :</strong> {card.lang?.toUpperCase() || "EN"}</div>
             <div><strong>Prix estimé :</strong> <span className="text-lg ml-5">{renderPrice()}</span></div>
@@ -489,6 +494,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
         {/* COLONNE 3 : ACTIONS */}
         <div className="card-col-actions">
           
+          {/* 1. SECTION ACHAT */}
           {card.purchase_uris && (Object.keys(card.purchase_uris).length > 0) && (
               <div>
                   <h4 className="m-0 mb-10 text-lg">Acheter</h4>
@@ -500,7 +506,20 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
               </div>
           )}
 
-          <div className="border-top">
+          {/* 2. SECTION CHANGER D'ÉDITION - APPARAÎT ICI UNIQUEMENT SUR MOBILE */}
+          <div className="modal-mobile-only mt-15 border-top pt-10">
+              <h4 className="m-0 mb-10 text-lg">Édition & Version</h4>
+              <div onClick={fetchReprints} title="Cliquez pour voir les autres éditions" style={{ cursor: "pointer", display: "inline-block", marginBottom: "10px" }}>
+                  <span>
+                      <strong style={{ color: "var(--text-muted)" }}>Actuelle : </strong> 
+                      <span style={{ textDecoration: "underline", color: "var(--primary)" }}>{card.set_name || "?"} ({card.set?.toUpperCase() || "?"})</span>
+                  </span>
+              </div>
+              {renderReprintsList()}
+          </div>
+
+          {/* 3. SECTION TAGS */}
+          <div className="mt-15 border-top pt-10">
               <span className="block mb-10 text-sm font-bold uppercase" style={{ color: "var(--text-muted)" }}>
                   Tags appliqués
               </span>
@@ -519,7 +538,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
                   )}
               </div>
 
-              <form onSubmit={handleAddTag} className="flex gap-8">
+              <form onSubmit={handleAddTag} className="flex gap-8 mt-10">
                   <input 
                       type="text" 
                       list="modal-available-tags"
@@ -534,9 +553,10 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
               </form>
           </div>
 
+          {/* 4. GESTION DU DECK */}
           {deckContext && (
-            <div>
-                <h4 className="m-0 mb-10 text-lg border-top" style={{ color: "var(--primary)" }}>Gestion du Deck</h4>
+            <div className="mt-15 border-top pt-10">
+                <h4 className="m-0 mb-10 text-lg" style={{ color: "var(--primary)" }}>Gestion du Deck</h4>
                 <div className="deck-mgmt-box">
                     <div className="flex justify-between items-center mb-10">
                         <div className="flex flex-col">
@@ -558,8 +578,9 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
             </div>
           )}
 
-          <div className="mt-auto">
-              <h4 className="m-0 mb-10 text-lg border-top">Collection</h4>
+          {/* 5. GESTION COLLECTION / AJOUT DECK */}
+          <div className="mt-15 border-top pt-10">
+              <h4 className="m-0 mb-10 text-lg">Collection</h4>
               
               <div className="mb-15">
                   <div className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>Possédés :</div>
@@ -568,7 +589,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
                     <div className="flex gap-5">
                         <input type="number" min="0" value={editCount} onChange={(e) => setEditCount(parseInt(e.target.value) || 0)} className="input-field w-full" />
                         <button onClick={handleUpdateCount} className="btn-primary">OK</button>
-                        <button onClick={() => setIsEditing(false)} className="btn-secondary">X</button>
+                        <button onClick={() => setIsEditing(false)} className="btn-secondary">✕</button>
                     </div>
                   ) : (
                     <div className="collection-mgmt-row">

@@ -339,19 +339,55 @@ export default function ItemsPage() {
   };
 
   return (
-    <div className="p-20">
+    <div className="ip-page-container">
       
       <div className="ip-header">
           <h2 className="m-0 text-primary">Bibliothèque</h2>
           
           <div className="flex gap-10">
-              <button className={isSelectionMode ? "btn-primary" : "btn-secondary"} onClick={toggleSelectionMode}>
-                  {isSelectionMode ? "Annuler la sélection" : "Sélectionner"}
+              <button 
+                  className={isSelectionMode ? "btn-primary ip-action-btn" : "btn-secondary ip-action-btn"} 
+                  onClick={toggleSelectionMode}
+                  title={isSelectionMode ? "Annuler la sélection" : "Sélectionner"}
+              >
+                  <span className="ip-btn-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 11 12 14 22 4"></polyline>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                      </svg>
+                  </span>
+                  <span className="ip-btn-text">{isSelectionMode ? "Annuler" : "Sélectionner"}</span>
               </button>
               {!isSelectionMode && (
                   <>
-                      <button className="btn-secondary" onClick={() => setShowImportDeckModal(true)}>Importer un Deck</button>
-                      <button className="btn-primary" onClick={() => setShowCreateModal(true)}>+ Nouveau</button>
+                      <button 
+                          className="btn-secondary ip-action-btn" 
+                          onClick={() => setShowImportDeckModal(true)}
+                          title="Importer un Deck"
+                      >
+                          <span className="ip-btn-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                  <polyline points="7 10 12 15 17 10"></polyline>
+                                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                              </svg>
+                          </span>
+                          <span className="ip-btn-text">Importer un Deck</span>
+                      </button>
+                      
+                      <button 
+                          className="btn-primary ip-action-btn" 
+                          onClick={() => setShowCreateModal(true)}
+                          title="Nouveau Dossier / Deck"
+                      >
+                          <span className="ip-btn-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                              </svg>
+                          </span>
+                          <span className="ip-btn-text">+ Nouveau</span>
+                      </button>
                   </>
               )}
           </div>

@@ -10,7 +10,6 @@ import { API_BASE_URL } from '../utils/api';
 
 const DEFAULT_CARD_BACK = "https://cards.scryfall.io/large/back/0/0.jpg";
 
-// L'ordre de ce tableau est important pour le tri des types multiples
 const TYPE_PRIORITY = [
   "Creature", "Planeswalker", "Instant", "Sorcery", 
   "Enchantment", "Artifact", "Battle", "Land", "Other", "Sideboard"
@@ -290,32 +289,39 @@ export default function DeckDetail() {
     const isInvalid = validation && validation.invalidCardIds && validation.invalidCardIds.includes(card.card_id);
 
     return (
-        <tr 
+        <div 
             key={idx} 
-            className={`dd-row ${isMissing ? 'missing' : ''} ${isInvalid ? 'invalid' : ''}`}
+            className={`dd-list-row ${isMissing ? 'missing' : ''} ${isInvalid ? 'invalid' : ''}`}
             onClick={() => setSelectedCard({ id: card.card_id, isMissing, isSideboard: card.is_sideboard, deckQuantity: card.quantity })} 
         >
-            <td className="dd-cell dd-cell-name" style={{ color: isMissing || isInvalid ? "var(--danger)" : "inherit" }}>
-                {card.name || "Carte Fantôme"}
-                {isMissing && (
-                    <span className="dd-missing-badge">Manque x{missingQty}</span>
-                )}
-                {isInvalid && (
-                    <svg className="dd-invalid-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                )}
-            </td>
-            <td className="dd-cell dd-cell-type">
-                {card.type_line || "Inconnu"}
-            </td>
-            <td className="dd-cell">
-                {typeKey === "Land" ? <span className="dd-set-text">{card.set_name || "N/A"}</span> : renderManaCost(card.mana_cost)}
-            </td>
-            <td className="dd-cell dd-cell-actions">
-                <div className="dd-cell-actions">
+            <div className="dd-row-info">
+                <span className="dd-row-qty">{card.quantity}x</span>
+                
+                <div className="dd-row-name-block">
+                    <span className="dd-row-name" style={{ color: isMissing || isInvalid ? "var(--danger)" : "inherit" }}>
+                        {card.name || "Carte Fantôme"}
+                    </span>
+                    <span className="dd-row-type">{card.type_line || "Inconnu"}</span>
+                </div>
+                
+                <div className="dd-row-cost">
+                    {typeKey === "Land" ? <span className="dd-set-text">{card.set_name || "N/A"}</span> : renderManaCost(card.mana_cost)}
+                </div>
+            </div>
+            
+            <div className="dd-row-actions" onClick={(e) => e.stopPropagation()}>
+                {/* On a déplacé les avertissements ici (sur mobile ça passe à la ligne naturellement) */}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    {isMissing && (
+                        <span className="dd-missing-badge">Manque x{missingQty}</span>
+                    )}
+                    {isInvalid && (
+                        <svg className="dd-invalid-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    )}
                     {isCommanderFormat && isLegendaryCreature && (
                         <button 
                             onClick={(e) => toggleCommander(e, card.card_id, card.is_commander)} 
@@ -325,19 +331,20 @@ export default function DeckDetail() {
                             Cmd
                         </button>
                     )}
-
-                    <button onClick={(e) => updateQuantity(e, card.card_id, "remove", card.is_sideboard)} className="dd-btn-circle">-</button>
-                    <span className="dd-qty-text">{card.quantity}</span>
-                    <button onClick={(e) => updateQuantity(e, card.card_id, "add", card.is_sideboard)} className="dd-btn-circle">+</button>
-                    
                     {canToggleBoard && (
                         <button onClick={(e) => toggleBoard(e, card.card_id, card.is_sideboard)} className="dd-btn-board" title={card.is_sideboard ? "Déplacer vers le deck principal" : "Déplacer vers la réserve"}>
                             ⇌
                         </button>
                     )}
                 </div>
-            </td>
-        </tr>
+                
+                <div className="dd-qty-controls">
+                    <button onClick={(e) => updateQuantity(e, card.card_id, "remove", card.is_sideboard)} className="dd-btn-circle">-</button>
+                    <span className="dd-qty-text">{card.quantity}</span>
+                    <button onClick={(e) => updateQuantity(e, card.card_id, "add", card.is_sideboard)} className="dd-btn-circle">+</button>
+                </div>
+            </div>
+        </div>
     );
   };
 
@@ -389,16 +396,14 @@ export default function DeckDetail() {
           {activeTab === 'cards' && (
             <div>
               {deck.format === "commander" && groupedCards["Commander"] && (
-                  <div className="dd-commander-box">
+                  <div className="dd-category-block">
                       <h3 className="dd-category-title dd-commander-title">
                           Zone de Commandement
                           <span className="dd-category-count">{groupedCards["Commander"].length}</span>
                       </h3>
-                      <table className="dd-table">
-                          <tbody>
-                              {groupedCards["Commander"].map((card, idx) => renderCardRow(card, idx, "Commander"))}
-                          </tbody>
-                      </table>
+                      <div className="dd-list-container">
+                          {groupedCards["Commander"].map((card, idx) => renderCardRow(card, idx, "Commander"))}
+                      </div>
                   </div>
               )}
 
@@ -414,19 +419,18 @@ export default function DeckDetail() {
                             {TYPE_TRANSLATIONS[typeKey]}
                             <span className="dd-category-count">{categoryCount}</span>
                         </h3>
-                        <table className="dd-table">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: "35%" }}>Nom</th>
-                                    <th style={{ width: "25%" }}>Type</th>
-                                    <th style={{ width: "15%" }}>{typeKey === "Land" ? "Extension" : "Coût"}</th>
-                                    <th style={{ width: "25%", textAlign: "right" }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <div className="dd-list-container">
+                            <div className="dd-list-header">
+                                <div style={{ width: "35px" }}>#</div>
+                                <div style={{ flex: 1 }}>Nom</div>
+                                <div style={{ width: "180px", padding: "0 10px" }}>Type</div>
+                                <div style={{ width: "90px", textAlign: "right" }}>{typeKey === "Land" ? "Extension" : "Coût"}</div>
+                                <div style={{ width: "150px", textAlign: "right" }}>Actions</div>
+                            </div>
+                            <div className="dd-list-body">
                                 {cards.map((card, idx) => renderCardRow(card, idx, typeKey))}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
                     </div>
                   );
               })}
