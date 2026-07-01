@@ -96,7 +96,7 @@ export default function CardSearchBar() {
     if (pToughness) searchParts.push(`toughness=${pToughness}`);
     if (pRarity) searchParts.push(`rarity:${pRarity}`);
     if (pLegality) {
-      const prefix = pLegalityType === "not" ? "not" : "legal";
+      const prefix = pLegalityType === "not" ? "-legal" : "legal";
       searchParts.push(`${prefix}:${pLegality}`);
     }
 
@@ -440,7 +440,7 @@ export default function CardSearchBar() {
             </>
           )}
 
-          {!loading && results.length > 0 && (
+          {!loading && results.length > 0 && (currentPage > 1 || hasMore) && (
             <div className="search-pagination">
               <button 
                 className="input-field" 

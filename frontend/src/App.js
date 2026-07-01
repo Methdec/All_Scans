@@ -12,7 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ItemsPage from "./components/ItemsPage";
 import DeckDetails from "./components/DeckDetails"; 
 import ProfilePage from "./components/ProfilePage";
-import DevicePage from "./components/DevicePage";
+// import DevicePage from "./components/DevicePage";
 
 const DEFAULT_AVATAR = "https://cards.scryfall.io/art_crop/front/0/0/00020b05-ecb9-4603-8cc1-8cfa7a14befc.jpg";
 
@@ -132,9 +132,9 @@ function App() {
                   <NavLink to="/cards" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
                       Collection
                   </NavLink>
-                  <NavLink to="/device" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
+                  {/* <NavLink to="/device" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu}>
                       Matériel
-                  </NavLink>
+                  </NavLink> */}
                   <NavLink to="/items" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`} onClick={closeMobileMenu} end>
                       Mes Decks
                   </NavLink>
@@ -190,7 +190,7 @@ function App() {
             {user && (
               <>
                 <NavLink to="/cards" style={navLinkStyle}>Collection</NavLink>
-                <NavLink to="/device" style={navLinkStyle}>Matériel</NavLink>
+                {/* <NavLink to="/device" style={navLinkStyle}>Matériel</NavLink> */}
                 <NavLink to="/items" style={navLinkStyle} end>Mes Decks</NavLink>
               </>
             )}
@@ -259,7 +259,7 @@ function App() {
             <Route path="/items" element={<ProtectedRoute><ItemsPage /></ProtectedRoute>} />
             <Route path="/deck/:id" element={<ProtectedRoute><DeckDetails /></ProtectedRoute>}/>
             <Route path="/cards" element={<ProtectedRoute><CardsList /></ProtectedRoute>} />
-            <Route path="/device" element={<ProtectedRoute><DevicePage /></ProtectedRoute>} />
+            {/* <Route path="/device" element={<ProtectedRoute><DevicePage /></ProtectedRoute>} /> */}
             <Route
               path="/profile"
               element={

@@ -121,6 +121,7 @@ export default function DeckSettings({ deck, onUpdate }) {
             });
             if (res.ok) {
                 const data = await res.json();
+                setShowDuplicateModal(false);
                 navigate(`/deck/${data.new_id}`);
             }
         } catch (e) { console.error(e); }

@@ -3783,3 +3783,28 @@ html, body {
 .deck-picker-overlay {
     z-index: 100000 !important;
 }
+
+/* =========================================
+   Surcharges de sécurité pour la grille Scryfall
+   ========================================= */
+
+/* Cible le conteneur de la grille sur Desktop */
+@media (min-width: 769px) {
+  .cl-cards-grid {
+    display: grid !important;
+    /* Force des colonnes de 220px fixes sans étirement 1fr */
+    grid-template-columns: repeat(auto-fill, 220px) !important;
+    gap: 20px !important;
+    /* Empêche la ligne unique de s'étirer verticalement dans l'espace flex: 1 */
+    align-content: start !important;
+    /* Aligne les colonnes au début (à gauche) s'il y en a peu */
+    justify-content: start !important;
+  }
+
+  .cl-card-item {
+    /* Empêche la carte de subir des déformations fluides */
+    width: 220px !important;
+    max-width: 220px !important;
+    box-sizing: border-box !important;
+  }
+}
