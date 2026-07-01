@@ -1,6 +1,6 @@
 # All Scans - Gestionnaire de Collection Magic: The Gathering
 
-**All Scans** est une application web complète (3-tier) destinée aux joueurs et collectionneurs de Magic: The Gathering. Elle permet de rechercher des cartes, de gérer sa collection personnelle, de construire des decks validés selon les règles officielles des formats, et s'interface avec un scanner de cartes physique basé sur un ESP32.
+**All Scans** est une application web complète (3-tier) destinée aux joueurs et collectionneurs de Magic: The Gathering. Elle permet de rechercher des cartes, de gérer sa collection personnelle, de construire des decks validés selon les règles officielles des formats.
 
 ---
 
@@ -12,7 +12,6 @@
   - Validation algorithmique des decks (respect de la règle des 4 exemplaires, contraintes de 100 cartes pour le Commander, etc.).
   - Statistiques visuelles de répartition de mana et de types de cartes.
 - **Collection Personnelle :** Ajout de cartes à une collection locale pour suivre sa possession réelle.
-- **Module Scanner (ESP32) :** Infrastructure réseau (mDNS, requêtes CORS) préparée pour recevoir et traiter les scans provenant d'un module matériel externe développé en C++.
 
 ---
 
@@ -25,7 +24,6 @@ Le projet est divisé en trois environnements distincts communicant via des API 
 | **Frontend** | React 18.2 | Interface utilisateur Single Page Application (SPA). Utilise React Router pour la navigation et Recharts pour les graphiques. |
 | **Backend** | FastAPI 0.117 | API REST asynchrone en Python. Gère la logique métier, la validation de données avec Pydantic et l'authentification (Argon2 / JWT). |
 | **Base de Données** | MongoDB 4.4 | Base de données NoSQL orientée documents (accès via PyMongo) stockant les utilisateurs, les collections et les decks. |
-| **Matériel** | ESP32 (C++) | Code embarqué gérant un portail captif Wi-Fi et un serveur HTTP léger pour l'envoi de requêtes vers l'application. |
 
 ---
 
@@ -39,15 +37,14 @@ All_Scans/
 │   ├── models/                # Schémas de données Pydantic
 │   ├── routes/                # Contrôleurs et endpoints (auth, decks, cards)
 │   └── utils/                 # Logique métier (validation de decks, hachage)
-├── frontend/                  # Code source de l'application React
-│   ├── public/                # Fichiers statiques
-│   └── src/
-│       ├── App.js             # Routage principal
-│       ├── components/        # Composants d'interface (Modales, Grilles, etc.)
-│       ├── theme.css          # Styles globaux
-│       └── utils/             # Fonctions utilitaires et appels API
-└── ScannerESP32/              # Code source du micrologiciel matériel
-    └── ScannerESP32.ino       # Script C++ (Arduino IDE)
+└── frontend/                  # Code source de l'application React
+    ├── public/                # Fichiers statiques
+    └── src/
+        ├── App.js             # Routage principal
+        ├── components/        # Composants d'interface (Modales, Grilles, etc.)
+        ├── theme.css          # Styles globaux
+        └── utils/             # Fonctions utilitaires et appels API
+
 ```
 
 ---
@@ -146,10 +143,3 @@ Si vous souhaitez accéder à l'application depuis un autre appareil sur votre r
 
 > ⚠️ Sans cette configuration, les requêtes émises depuis un autre appareil que `localhost` seront bloquées par la politique CORS du backend. Pensez à mettre à jour ces deux fichiers à chaque changement de réseau (IP différente selon le lieu : maison, bureau, etc.).
 
----
-
-## 5. Sécurité
-
-- **Mots de passe :** Hachés et salés via l'algorithme Argon2id.
-- **Sessions :** Sécurisées par des JSON Web Tokens (JWT) avec expiration.
-- **CORS :** Le backend est configuré pour n'accepter que les requêtes provenant de l'interface client définie.
