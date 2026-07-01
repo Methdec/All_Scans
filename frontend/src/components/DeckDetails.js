@@ -115,7 +115,7 @@ export default function DeckDetail() {
   const getCardCategory = (typeLine) => {
     if (!typeLine) return "Other";
     const ignored = ["legendary", "basic", "snow", "world", "tribal"];
-    const mainTypeString = typeLine.split("—")[0].split("-")[0].trim();
+    const mainTypeString = typeLine.split("~")[0].split("~")[0].trim();
     const types = mainTypeString.split(" ");
     
     let bestType = "Other";
@@ -301,6 +301,10 @@ export default function DeckDetail() {
                     <span className="dd-row-name" style={{ color: isMissing || isInvalid ? "var(--danger)" : "inherit" }}>
                         {card.name || "Carte Fantôme"}
                     </span>
+                    {/* MODIFICATION ICI : On ajoute le badge uniquement pour la version Desktop */}
+                    {isMissing && (
+                        <span className="dd-missing-badge dd-badge-desktop">Manque x{missingQty}</span>
+                    )}
                     <span className="dd-row-type">{card.type_line || "Inconnu"}</span>
                 </div>
                 
@@ -310,17 +314,10 @@ export default function DeckDetail() {
             </div>
             
             <div className="dd-row-actions" onClick={(e) => e.stopPropagation()}>
-                {/* On a déplacé les avertissements ici (sur mobile ça passe à la ligne naturellement) */}
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    {/* MODIFICATION ICI : Ce badge ne s'affichera que sur Mobile */}
                     {isMissing && (
-                        <span className="dd-missing-badge">Manque x{missingQty}</span>
-                    )}
-                    {isInvalid && (
-                        <svg className="dd-invalid-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
+                        <span className="dd-missing-badge dd-badge-mobile">Manque x{missingQty}</span>
                     )}
                     {isCommanderFormat && isLegendaryCreature && (
                         <button 
@@ -424,8 +421,8 @@ export default function DeckDetail() {
                                 <div style={{ width: "35px" }}>#</div>
                                 <div style={{ flex: 1 }}>Nom</div>
                                 <div style={{ width: "180px", padding: "0 10px" }}>Type</div>
-                                <div style={{ width: "90px", textAlign: "right" }}>{typeKey === "Land" ? "Extension" : "Coût"}</div>
-                                <div style={{ width: "150px", textAlign: "right" }}>Actions</div>
+                                <div style={{ width: "80px", textAlign: "right" }}>{typeKey === "Land" ? "Extension" : "Coût"}</div>
+                                <div style={{ width: "180px", textAlign: "right" }}>Actions</div>
                             </div>
                             <div className="dd-list-body">
                                 {cards.map((card, idx) => renderCardRow(card, idx, typeKey))}

@@ -44,7 +44,7 @@ function DeckPickerModal({ onClose, onSelect }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 99999 }}>
+    <div className="modal-overlay deck-picker-overlay" onClick={onClose}>
       <div className="modal-box deck-picker-box" onClick={e => e.stopPropagation()}>
         <div className="deck-picker-header">
           <h3 className="m-0 text-lg">Ajouter au deck...</h3>
@@ -354,7 +354,6 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
       return <span style={{color: "var(--text-muted)"}}>--</span>;
   };
 
-  // Fonction partagée pour injecter la même structure de liste d'éditions sans duplication lourde de JSX
   const renderReprintsList = () => {
       if (!showReprints) return null;
       return (
@@ -381,7 +380,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
   };
 
   if (loading && !card && !error) return (
-      <div className="modal-overlay" onClick={handleManualClose}>
+      <div className="modal-overlay" style={{ zIndex: 100000 }} onClick={handleManualClose}>
           <div className="modal-box justify-center items-center" style={{ background: "transparent", boxShadow: "none" }} onClick={e => e.stopPropagation()}>
             <Loader />
           </div>
@@ -390,7 +389,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
 
   if (error) {
       return (
-          <div className="modal-overlay" onClick={handleManualClose}>
+          <div className="modal-overlay" style={{ zIndex: 100000 }} onClick={handleManualClose}>
               <div className="modal-content" style={{ width: "400px", padding: "30px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
                   <h3 className="m-0 text-danger">Erreur</h3>
                   <p style={{ color: "var(--text-main)", lineHeight: "1.5", wordBreak: "break-word" }}>{error}</p>
@@ -417,7 +416,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
 
   return (
     <>
-    <div className="modal-overlay" onClick={(e) => e.target.classList.contains("modal-overlay") && handleManualClose()}>
+    <div className="modal-overlay card-modal-overlay" onClick={(e) => e.target.classList.contains("modal-overlay") && handleManualClose()}>
       
       <div className="modal-content card-modal-content">
         
@@ -553,32 +552,7 @@ export default function CardModal({ cardId, isFoil, defaultCount, onClose, onNex
               </form>
           </div>
 
-          {/* 4. GESTION DU DECK */}
-          {deckContext && (
-            <div className="mt-15 border-top pt-10">
-                <h4 className="m-0 mb-10 text-lg" style={{ color: "var(--primary)" }}>Gestion du Deck</h4>
-                <div className="deck-mgmt-box">
-                    <div className="flex justify-between items-center mb-10">
-                        <div className="flex flex-col">
-                            <span className="font-bold">Quantité</span>
-                            <span className="text-sm" style={{ color: "var(--text-muted)" }}>{deckContext.isSideboard ? "(Réserve)" : "(Principal)"}</span>
-                        </div>
-                        <span className="text-2xl font-bold" style={{ color: "var(--primary)" }}>x{deckContext.quantity}</span>
-                    </div>
-                    <div className="flex gap-10">
-                        <button onClick={deckContext.onRemove} className="btn-primary flex-1 font-bold text-xl p-8">-</button>
-                        <button onClick={deckContext.onAdd} className="btn-primary flex-1 font-bold text-xl p-8">+</button>
-                    </div>
-                    {deckContext.quantity === 1 && (
-                        <div className="text-sm mt-8 text-center" style={{ color: "var(--text-muted)" }}>
-                            (Retirer passera à la suivante)
-                        </div>
-                    )}
-                </div>
-            </div>
-          )}
-
-          {/* 5. GESTION COLLECTION / AJOUT DECK */}
+          {/* 4. GESTION COLLECTION / AJOUT DECK */}
           <div className="mt-15 border-top pt-10">
               <h4 className="m-0 mb-10 text-lg">Collection</h4>
               

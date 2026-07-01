@@ -417,7 +417,7 @@ export default function ProfilePage({ user, setUser, theme, toggleTheme, handleL
             style={{ 
             position: "fixed", 
             top: 0, left: 0, width: "100%", height: "100%", 
-            zIndex: -1, pointerEvents: "none"
+            zIndex: 0, pointerEvents: "none"
             }}
         >
             <div key={`bg-${bgCards.length}`} style={{ opacity: 0.8, width: '100%', height: '100%', position: 'absolute' }}>

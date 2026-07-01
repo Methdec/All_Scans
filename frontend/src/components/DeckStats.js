@@ -33,6 +33,22 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const getBaseType = (typeLine) => {
+    if (!typeLine) return "Autres";
+    const lowerType = typeLine.toLowerCase();
+    
+    if (lowerType.includes("creature")) return "Créatures";
+    if (lowerType.includes("planeswalker")) return "Planeswalkers";
+    if (lowerType.includes("instant")) return "Éphémères";
+    if (lowerType.includes("sorcery")) return "Rituels";
+    if (lowerType.includes("enchantment")) return "Enchantements";
+    if (lowerType.includes("artifact")) return "Artéfacts";
+    if (lowerType.includes("battle")) return "Batailles";
+    if (lowerType.includes("land")) return "Terrains";
+    
+    return "Autres";
+};
+
 export default function DeckStats({ deck, onUpdate }) {
   const [curveMode, setCurveMode] = useState("type"); 
   const [includeColorlessInPie, setIncludeColorlessInPie] = useState(false);
@@ -152,14 +168,17 @@ export default function DeckStats({ deck, onUpdate }) {
   const typePieData = useMemo(() => {
     const counts = {};
     if (!cards) return [];
+    
     cards.forEach(card => {
-        if (!card.type_line) return;
-        let mainType = card.type_line.split("—")[0].trim().split(" ").pop();
+        const mainType = getBaseType(card.type_line);
         if (!counts[mainType]) counts[mainType] = 0;
         counts[mainType] += (card.quantity || 1);
     });
-    return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
-  }, [cards]);
+    
+    return Object.keys(counts)
+        .map(key => ({ name: key, value: counts[key] }))
+        .sort((a, b) => b.value - a.value);
+}, [cards]);
 
   const colorPieData = useMemo(() => {
       const counts = { White: 0, Blue: 0, Black: 0, Red: 0, Green: 0, Colorless: 0 };
