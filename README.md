@@ -22,12 +22,22 @@ Le projet est divisé en trois environnements distincts communicant via des API 
 | Composant | Technologie | Description |
 | :--- | :--- | :--- |
 | **Frontend** | React 18.2 | Interface utilisateur Single Page Application (SPA). Utilise React Router pour la navigation et Recharts pour les graphiques. |
-| **Backend** | FastAPI 0.117 | API REST asynchrone en Python. Gère la logique métier, la validation de données avec Pydantic et l'authentification (Argon2 / JWT). |
+| **Backend** | FastAPI 0.117 | API REST asynchrone en Python. Gère la logique métier, la validation de données avec Pydantic et l'authentification par sessions sécurisées (Argon2 / Cookies HttpOnly). |
 | **Base de Données** | MongoDB 4.4 | Base de données NoSQL orientée documents (accès via PyMongo) stockant les utilisateurs, les collections et les decks. |
 
 ---
 
-## 3. Structure du Projet
+## 3. Sécurité Implémentée
+
+La sécurité de l'application repose sur des standards modernes et robustes :
+* **Hachage des Mots de Passe :** Utilisation de l'algorithme de pointe **Argon2id** (résistant aux attaques par force brute et par dictionnaire).
+* **Authentification par Session :** Les connexions génèrent un jeton cryptographiquement fort, stocké en base de données et transmis au client via un **Cookie sécurisé (`HttpOnly`)**, rendant le vol de session via des attaques XSS (Cross-Site Scripting) impossible.
+* **Protection contre les Injections :** L'utilisation conjointe de MongoDB (NoSQL) et de Pydantic (typage strict) neutralise par conception les tentatives d'injections SQL et NoSQL.
+* **CORS (Cross-Origin Resource Sharing) :** Le backend filtre et n'autorise que les requêtes provenant de l'interface client légitime.
+
+---
+
+## 4. Structure du Projet
 
 ```
 All_Scans/
@@ -49,7 +59,7 @@ All_Scans/
 
 ---
 
-## 4. Installation et Lancement (Environnement de Développement)
+## 5. Installation et Lancement (Environnement de Développement)
 
 Pour exécuter ce projet localement sans utiliser de conteneurs, vous devez disposer de **Node.js**, **Python 3.10+** et d'une instance **MongoDB** en cours d'exécution sur le port 27017.
 

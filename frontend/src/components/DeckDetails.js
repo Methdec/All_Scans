@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { validateDeck } from "../utils/deckRules";
 import CardModal from "./CardModal";
-import CardSearchDetailModal from "./CardSearchDetailModal";
+import ScryfallSearchModal from "./ScryfallSearchModal";
 import DeckStats from "./DeckStats";
 import DeckSettings from "./DeckSettings";
 import "../theme.css";
@@ -486,7 +486,7 @@ export default function DeckDetail() {
       )}
 
       {selectedCard && selectedCard.isMissing && (
-        <CardSearchDetailModal 
+        <ScryfallSearchModal 
           cardId={selectedCard.id} 
           deckContext={deckContext}
           onClose={() => { setSelectedCard(null); fetchDeck(); }} 

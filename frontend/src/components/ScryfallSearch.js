@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import "../theme.css";
-import CardSearchDetailModal from "./CardSearchDetailModal";
+import ScryfallSearchModal from "./ScryfallSearchModal";
 import Loader from "./Loader"; 
 
 const MANA_SYMBOLS = {
@@ -25,7 +25,7 @@ const serializeTags = (tags) => {
   return tags.map(t => t.isExcluded ? `-${t.text}` : t.text).join(',');
 };
 
-export default function CardSearchBar() {
+export default function ScryfallSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [query, setQuery] = useState(searchParams.get("query") || "");
@@ -465,7 +465,7 @@ export default function CardSearchBar() {
       </div>
 
       {selectedCard && (
-        <CardSearchDetailModal
+        <ScryfallSearchModal
           card={selectedCard}
           onClose={() => setSelectedCard(null)}
           onNext={handleNextCard}

@@ -5,7 +5,7 @@ import "./theme.css";
 import { API_BASE_URL } from './utils/api';
 
 import CardsList from "./components/CardsList";
-import CardSearchBar from "./components/CardSearchBar";
+import ScryfallSearch from "./components/ScryfallSearch";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -255,7 +255,7 @@ function App() {
             <Route path="/" element={<Navigate to={user ? "/items" : "/login"} />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/search" element={<CardSearchBar />} />
+            <Route path="/search" element={<ScryfallSearch />} />
             <Route path="/items" element={<ProtectedRoute><ItemsPage /></ProtectedRoute>} />
             <Route path="/deck/:id" element={<ProtectedRoute><DeckDetails /></ProtectedRoute>}/>
             <Route path="/cards" element={<ProtectedRoute><CardsList /></ProtectedRoute>} />

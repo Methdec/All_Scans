@@ -3,7 +3,7 @@ import "../theme.css";
 import Loader from "./Loader";
 import { API_BASE_URL } from '../utils/api';
 
-export default function CardSearchDetailModal({ card: propCard, cardId, onClose, onNext, onPrev, hasNext, hasPrev, deckContext }) {
+export default function ScryfallSearchModal({ card: propCard, cardId, onClose, onNext, onPrev, hasNext, hasPrev, deckContext }) {
   const [fetchedCard, setFetchedCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
