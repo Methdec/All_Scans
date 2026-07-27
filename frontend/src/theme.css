@@ -422,6 +422,7 @@ code {
   --text-muted: #666666;
   --border: #E0E0E0;
   --overlay-bg: rgba(255, 255, 255, 0.8);
+  --bg-hover: #EAEAEA;
 }
 
 body {
