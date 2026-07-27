@@ -143,7 +143,7 @@ export default function CardsList() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
-  const fetchCards = async (pageNumber, isNewFilter = false) => {
+    const fetchCards = async (pageNumber, isNewFilter = false) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -151,15 +151,14 @@ export default function CardsList() {
     setLoading(true);
     
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("name", searchTerm);
-      if (oracleText) params.append("oracle_text", oracleText);
-      if (rarityFilter) params.append("rarity", rarityFilter);
-      
-      if (colorFilter) {
-          params.append("colors", colorFilter);
-          params.append("color_mode", colorMode);
-      }
+        const params = new URLSearchParams();
+        if (searchTerm) params.append("name", searchTerm);
+        if (oracleText) params.append("oracle_text", oracleText);
+        if (rarityFilter) params.append("rarity", rarityFilter);
+        if (colorFilter) {
+            params.append("colors", colorFilter);
+            params.append("color_mode", colorMode);
+        }
 
       if (typeFilters.length > 0) {
           const typeQuery = typeFilters.map(t => t.mode === "exclude" ? `-${t.text}` : t.text).join(",");

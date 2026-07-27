@@ -21,8 +21,7 @@ def parse_mtg_line(line: str):
         is_commander = True
         line = re.sub(r"^CMDR:\s+", "", line, flags=re.IGNORECASE).strip()
 
-    # 2. NOUVEAU : Nettoyage des balises de zone en fin de ligne (ex: "(Principal)", "(Sideboard)")
-    # Cela permet d'importer proprement les listes exportées depuis notre propre app ou Arena
+    # 2. Nettoyage des balises de zone en fin de ligne (Principal, Sideboard)
     line = re.sub(r"\s*\((?:Principal|Mainboard|Sideboard|Reserve|CMDR|Commander)\)$", "", line, flags=re.IGNORECASE).strip()
 
     # 3. Detection Foil

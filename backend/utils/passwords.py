@@ -2,7 +2,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 import re
 
-# Initialisation du hasher Argon2 natif (Plus besoin de passlib !)
+# Initialisation du hasher Argon2 natif
 ph = PasswordHasher()
 
 def hash_password(plain_password: str) -> str:

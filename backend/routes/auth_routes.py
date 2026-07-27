@@ -126,8 +126,8 @@ def login_mfa_verify(response: Response, data: dict = Body(...)):
         key="session_token",
         value=token,
         httponly=True,
-        samesite="none",
-        secure=True, 
+        samesite="lax",
+        secure=False, 
     )
 
     return {"message": "Connexion reussie", "user": {"id": str(user["_id"]), "nom": user["nom"], "avatar": user.get("avatar")}}
@@ -139,7 +139,7 @@ def setup_mfa(user_id: str = Depends(get_current_user)):
     secret = pyotp.random_base32()
     users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"temp_mfa_secret": secret}})
     
-    app_name = "HexaDeck"
+    app_name = "All Scans"
     user_email = user["email"]
     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user_email, issuer_name=app_name)
     

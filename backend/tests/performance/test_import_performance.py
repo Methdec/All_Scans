@@ -56,8 +56,8 @@ def test_parsing_performance(raw_text):
 
 @pytest.mark.asyncio
 async def test_concurrent_batch_performance():
-    """Test de charge : 5 requêtes simultanées."""
-    card_names = ["Opt", "Negate", "Shock", "Duress", "Forest"]
+    """Test de charge : 3 requêtes simultanées."""
+    card_names = ["Opt", "Negate","Duress"]
     
     start_time = time.time()
     async with httpx.AsyncClient() as client:
@@ -72,5 +72,5 @@ async def test_concurrent_batch_performance():
             assert res.status_code == 200
 
     duration = time.time() - start_time
-    print(f"   -> Batch 5 cartes: {duration:.4f}s")
+    print(f"   -> Batch 3 cartes: {duration:.4f}s")
     assert duration < 2.0

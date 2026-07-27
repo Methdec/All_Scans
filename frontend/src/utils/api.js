@@ -2,7 +2,7 @@
 
 // L'URL de base de ton backend.
 // Tu ne la modifies plus qu'ici !
-export const API_BASE_URL = "http://172.22.176.1:8000";
+export const API_BASE_URL = "http://192.168.1.129:8000";
 
 // hexagone : 10.1.5.252
 // chartres : 192.168.1.48
